@@ -272,6 +272,17 @@ button,input,select,textarea{font-family:var(--sans);}
 .ocr-status.loading{color:var(--purple);}
 /* OCR persistent panel (stays in template sidebar) */
 .ocr-persist-panel{flex-shrink:0;border-top:2px solid var(--purple);background:var(--surface);padding:8px 12px;display:flex;flex-direction:column;gap:5px;}
+/* OCR → Table card */
+.ocr-tbl-card{background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:7px 9px;font-size:10px;}
+.ocr-tbl-card-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;}
+.ocr-tbl-card-hdr span{font-weight:700;font-size:11px;color:var(--teal);}
+.ocr-tbl-card-hdr button{background:none;border:none;cursor:pointer;font-size:10px;color:var(--accent);padding:0;}
+.ocr-tbl-card-hdr button:hover{text-decoration:underline;}
+.ocr-tbl-row{display:grid;grid-template-columns:90px 1fr;gap:2px 6px;padding:2px 0;border-top:1px solid var(--border);}
+.ocr-tbl-lbl{color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ocr-tbl-val{color:var(--text);font-family:var(--mono);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ocr-tbl-not-found{color:var(--text3);font-size:10px;font-style:italic;padding:3px 0;}
+.ocr-tbl-multi{font-size:9px;color:var(--text3);margin-top:3px;cursor:pointer;color:var(--accent);}
 .ocr-persist-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;}
 .ocr-persist-hdr span{font-size:11px;font-weight:600;color:var(--purple);text-transform:uppercase;letter-spacing:.04em;}
 .ocr-persist-hdr button{background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;line-height:1;}
@@ -640,6 +651,8 @@ body.sql-panel-open .main{height:calc(var(--sql-panel-h, 46vh) * -1 + 100vh - 48
           <div class="ocr-persist-fields" id="ocrPersistFields"></div>
           <button class="btn-insert" style="margin-top:4px" onclick="insertOCRToReply()">→ Inserează în reply</button>
           <button class="btn-insert" style="margin-top:3px;background:var(--accent)" onclick="showRegModal()">📋 Înregistrează în Registru</button>
+          <!-- Card beneficiar din tabel SQL/Excel -->
+          <div id="ocrTableCard" style="display:none;margin-top:6px;border-top:1px solid var(--border);padding-top:6px"></div>
         </div>
 
         <!-- Template preview panel (hidden until template selected) -->
@@ -1892,6 +1905,8 @@ function renderOCRFields(data) {
   document.getElementById('ocrSection').innerHTML=html||'<div class="ocr-hint">Niciun câmp extras.</div>';
   // Also update persistent panel in template sidebar
   updateOcrPersistPanel();
+  // Auto-search CNP in loaded table
+  if (data.CNP && _sqlAllRows.length) _ocrSearchTable(data.CNP);
 }
 
 function updateOcrPersistPanel() {
@@ -1909,6 +1924,106 @@ function clearPersistOcr() {
   persistOcrData=null; ocrData=null;
   document.getElementById('ocrPersistPanel').classList.add('hidden');
   document.getElementById('ocrPersistFields').innerHTML='';
+  document.getElementById('ocrTableCard').style.display='none';
+  document.getElementById('ocrTableCard').innerHTML='';
+}
+
+// ── Căutare automată CNP în tabelul SQL/Excel după OCR ──────
+function _ocrSearchTable(cnp) {
+  const card = document.getElementById('ocrTableCard');
+  if (!cnp || !_sqlAllRows.length) { card.style.display='none'; return; }
+  const cnpStr = String(cnp).trim();
+
+  // Find all rows where any column exactly matches the CNP
+  const hits = _sqlAllRows.filter(row =>
+    _sqlColumns.some(c => String(row[c]??'').trim() === cnpStr)
+  );
+
+  card.style.display = '';
+  if (!hits.length) {
+    card.innerHTML = `<div class="ocr-tbl-card">
+      <div class="ocr-tbl-card-hdr"><span>🗄 Tabel</span></div>
+      <div class="ocr-tbl-not-found">CNP <b>${esc(cnpStr)}</b> negăsit în tabelul curent.</div>
+    </div>`;
+    return;
+  }
+
+  // Columns to display: exclude CNP col + prefer Nume/Prenume/Sector/Status + others
+  const cnpCol  = _sqlColumns.find(c => String(hits[0][c]??'').trim() === cnpStr) || '';
+  const priority = /^(nume|prenume|sector|status|situatie|adresa|localitate|observ|data|suma|suma|luna|stare)/i;
+  const showCols = _sqlColumns
+    .filter(c => c !== cnpCol)
+    .sort((a,b) => (priority.test(b)?1:0) - (priority.test(a)?1:0))
+    .slice(0, 7);
+
+  function renderHit(row) {
+    return showCols
+      .filter(c => row[c] !== null && row[c] !== undefined && String(row[c]).trim() !== '')
+      .map(c => `<div class="ocr-tbl-row">
+        <span class="ocr-tbl-lbl" title="${esc(c)}">${esc(c)}</span>
+        <span class="ocr-tbl-val" title="${esc(String(row[c]))}">${esc(String(row[c]).slice(0,60))}</span>
+      </div>`).join('');
+  }
+
+  const multiNote = hits.length > 1
+    ? `<div class="ocr-tbl-multi" onclick="ocrShowAllHits()" title="Afișează toate">
+        ▼ ${hits.length} rânduri găsite — click pentru toate
+       </div>` : '';
+
+  card.innerHTML = `<div class="ocr-tbl-card">
+    <div class="ocr-tbl-card-hdr">
+      <span>🗄 ${hits.length > 1 ? hits.length + ' rânduri' : 'Găsit în tabel'}</span>
+      <button onclick="ocrJumpToTable('${esc(cnpStr)}')" title="Deschide tabelul filtrat pe acest CNP">↗ Deschide tabel</button>
+    </div>
+    <div class="ocr-tbl-row" style="border-top:none">
+      <span class="ocr-tbl-lbl" style="color:var(--teal)">${esc(cnpCol||'CNP')}</span>
+      <span class="ocr-tbl-val" style="color:var(--teal);font-weight:700">${esc(cnpStr)}</span>
+    </div>
+    ${renderHit(hits[0])}
+    ${multiNote}
+  </div>`;
+
+  // Store hits for expand
+  card._hits = hits;
+  card._cnpCol = cnpCol;
+  card._showCols = showCols;
+  card._cnpStr = cnpStr;
+}
+
+function ocrShowAllHits() {
+  const card = document.getElementById('ocrTableCard');
+  if (!card._hits) return;
+  const {_hits: hits, _cnpCol, _showCols, _cnpStr} = card;
+  let rows = '';
+  hits.forEach((row, i) => {
+    rows += `<div style="font-size:9px;color:var(--text3);padding:3px 0 1px;font-weight:700">— Rând ${i+1} —</div>`;
+    rows += _showCols
+      .filter(c => row[c] !== null && row[c] !== undefined && String(row[c]).trim() !== '')
+      .map(c => `<div class="ocr-tbl-row">
+        <span class="ocr-tbl-lbl" title="${esc(c)}">${esc(c)}</span>
+        <span class="ocr-tbl-val" title="${esc(String(row[c]))}">${esc(String(row[c]).slice(0,60))}</span>
+      </div>`).join('');
+  });
+  const inner = card.querySelector('.ocr-tbl-card');
+  const multi = inner.querySelector('.ocr-tbl-multi');
+  if (multi) {
+    multi.outerHTML = `<div style="max-height:200px;overflow-y:auto;margin-top:4px;border-top:1px solid var(--border)">${rows}</div>`;
+  }
+}
+
+function ocrJumpToTable(cnp) {
+  // Deschide panelul SQL filtrat pe CNP-ul respectiv
+  showSqlViewer();
+  setTimeout(() => {
+    const search = document.getElementById('sqlSearch');
+    if (search) { search.value = cnp; filterSqlTable(cnp); }
+    // Dacă Sumar e activ, setează CNP filter
+    if (_sqlViewMode === 'sumar') {
+      _sumarCnpFilter = cnp;
+      _sumarViewMode  = 'card';
+      _renderSumarPanel();
+    }
+  }, 80);
 }
 
 function insertOCRToReply() {
@@ -3902,19 +4017,20 @@ function _looksLikeEmail(v) {
   return _reEmail.test(String(v).trim());
 }
 
-function renderSqlTable(rows) {
+const SQL_PAGE = 300; // rânduri per pagină
+let _sqlRenderOffset = 0;
+
+function renderSqlTable(rows, offset) {
+  _sqlRenderOffset = offset || 0;
   if (!rows.length) {
     document.getElementById('sqlBody').innerHTML = '<div class="load-row" style="padding:60px;color:var(--text3)">Nicio înregistrare găsită</div>';
     return;
   }
   const cols = _sqlColumns;
+  const pageRows = rows.slice(_sqlRenderOffset, _sqlRenderOffset + SQL_PAGE);
 
-  // Detect which columns contain at least one email value (for header ✉ badge)
-  const emailCols = new Set(cols.filter(c =>
-    rows.slice(0, 20).some(r => _looksLikeEmail(r[c]))
-  ));
-
-  // Pre-compute Nume/Prenume column names once (used in every email cell)
+  // Detect email cols only on page slice (fast)
+  const emailCols = new Set(cols.filter(c => pageRows.slice(0,10).some(r => _looksLikeEmail(r[c]))));
   const numeCol = cols.find(x => /^(nume|last.?name|nume_ah)$/i.test(x.trim()));
   const prenCol = cols.find(x => /^(prenume|first.?name|prenume_ah)$/i.test(x.trim()));
 
@@ -3926,7 +4042,7 @@ function renderSqlTable(rows) {
   });
   html += '</tr></thead><tbody>';
 
-  rows.forEach(row => {
+  pageRows.forEach(row => {
     const nume = numeCol ? String(row[numeCol]||'').trim() : '';
     const pren = prenCol ? String(row[prenCol]||'').trim() : '';
     const displayName = `${nume} ${pren}`.trim();
@@ -3944,9 +4060,30 @@ function renderSqlTable(rows) {
     });
     html += '</tr>';
   });
-
   html += '</tbody></table>';
+
+  // Pagination bar if needed
+  if (rows.length > SQL_PAGE) {
+    const totalPages = Math.ceil(rows.length / SQL_PAGE);
+    const curPage    = Math.floor(_sqlRenderOffset / SQL_PAGE);
+    html += `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-top:1px solid var(--border);font-size:11px;color:var(--text3)">
+      <button class="tb-btn" onclick="sqlPage(-1)" ${curPage===0?'disabled':''}>◀</button>
+      <span>Pagina ${curPage+1} din ${totalPages} · ${rows.length.toLocaleString('ro-RO')} rânduri total</span>
+      <button class="tb-btn" onclick="sqlPage(1)" ${curPage===totalPages-1?'disabled':''}>▶</button>
+    </div>`;
+  }
+
   document.getElementById('sqlBody').innerHTML = html;
+  // Store reference for pagination
+  document.getElementById('sqlBody')._rows = rows;
+}
+
+function sqlPage(dir) {
+  const body = document.getElementById('sqlBody');
+  const rows = body._rows || _sqlAllRows;
+  const newOffset = Math.max(0, Math.min(_sqlRenderOffset + dir * SQL_PAGE, rows.length - 1));
+  renderSqlTable(rows, newOffset);
+  body.scrollTop = 0;
 }
 
 function sqlComposeEmailBtn(btn) {
