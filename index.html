@@ -1,0 +1,3009 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DGASMC · Dashboard Email</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#f2ece4; --surface:#ebe3d8; --surface2:#ddd5c8; --surface3:#cfc6b8;
+  --border:#c2b8ab; --accent:#2563eb; --accent2:#3b82f6;
+  --green:#16a34a; --yellow:#b45309; --red:#dc2626;
+  --orange:#c2410c; --purple:#7c3aed; --teal:#0f766e;
+  --text:#111111; --text2:#333333; --text3:#666666;
+  --mono:'IBM Plex Mono',monospace; --sans:'IBM Plex Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{color-scheme:light;}
+html,body{height:100%;background:var(--bg);color:var(--text);overflow:hidden;font-family:var(--sans);font-size:18px;line-height:1.5;}
+button,input,select,textarea{font-family:var(--sans);}
+
+/* ── SCREENS ── */
+.screen{display:flex;align-items:center;justify-content:center;height:100vh;}
+.hidden{display:none!important;}
+
+/* ── SETUP ── */
+.setup-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:36px 40px;width:580px;max-width:95vw;}
+.setup-card h1{font-size:18px;font-weight:600;margin-bottom:4px;}
+.setup-card .sub{font-size:13px;color:var(--text3);margin-bottom:22px;}
+.steps{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:14px 18px;margin-bottom:18px;font-size:12px;color:var(--text2);line-height:2.2;}
+.steps b{color:var(--accent2);}
+.steps code{font-family:var(--mono);font-size:11px;color:var(--teal);background:var(--surface3);padding:1px 5px;border-radius:3px;}
+.setup-group{margin-bottom:12px;}
+.setup-group label{display:block;font-size:11px;color:var(--text3);margin-bottom:4px;}
+.setup-row{display:flex;gap:8px;}
+.setup-row input,.setup-input{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:7px 11px;border-radius:4px;outline:none;width:100%;}
+.setup-row input:focus,.setup-input:focus{border-color:var(--accent);}
+.setup-row input::placeholder,.setup-input::placeholder{color:var(--text3);}
+.btn-primary{background:var(--accent);color:#fff;border:none;padding:7px 20px;border-radius:4px;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;}
+.btn-primary:hover{background:#2563eb;}
+.setup-note{font-size:11px;color:var(--text3);margin-top:10px;}
+
+/* ── AUTH ── */
+.auth-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:40px;text-align:center;width:380px;}
+.auth-card h2{font-size:16px;margin-bottom:6px;}
+.auth-card p{font-size:12px;color:var(--text3);margin-bottom:22px;}
+.auth-gmail{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:13px;padding:10px 24px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:all .15s;}
+.auth-gmail:hover{background:var(--surface3);border-color:var(--accent2);}
+.auth-err{color:var(--red);font-size:12px;margin-top:12px;}
+#btnChangeCid{background:none;border:none;color:var(--text3);font-size:11px;cursor:pointer;margin-top:14px;text-decoration:underline;}
+#btnChangeCid:hover{color:var(--text2);}
+
+/* ── TOPBAR ── */
+.topbar{height:48px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 14px;flex-shrink:0;}
+.topbar-logo{font-family:var(--mono);font-size:11px;color:var(--accent2);letter-spacing:.06em;white-space:nowrap;font-weight:500;}
+.sep{color:var(--border);font-size:16px;margin:0 2px;}
+.tb-label{font-size:11px;color:var(--text3);white-space:nowrap;}
+.tb-select,.tb-input{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:12px;padding:4px 8px;border-radius:4px;outline:none;}
+.tb-select:focus,.tb-input:focus{border-color:var(--accent);}
+.tb-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-size:11px;padding:4px 10px;border-radius:4px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.tb-btn:hover{background:var(--surface3);color:var(--text);}
+.tb-btn.on{background:rgba(59,130,246,.15);border-color:var(--accent);color:var(--accent2);}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:8px;}
+.token-warn{font-size:11px;color:var(--yellow);cursor:pointer;text-decoration:underline;}
+
+/* ── BI SIDEBAR TAB ── */
+.bi-tab{
+  position:fixed;left:0;top:50%;transform:translateY(-50%);
+  z-index:500;
+  display:flex;flex-direction:column;align-items:center;
+  background:var(--accent);color:#fff;
+  writing-mode:vertical-rl;text-orientation:mixed;
+  font-size:10px;font-weight:600;letter-spacing:.08em;font-family:var(--mono);
+  padding:14px 7px;border-radius:0 6px 6px 0;
+  cursor:pointer;text-decoration:none;
+  box-shadow:2px 0 12px rgba(37,99,235,.35);
+  transition:all .15s;opacity:.85;
+}
+.bi-tab:hover{opacity:1;padding-left:10px;box-shadow:3px 0 18px rgba(37,99,235,.5);}
+.bi-tab-icon{writing-mode:horizontal-tb;font-size:14px;margin-bottom:6px;}
+
+/* ── MAIN ── */
+.main{display:flex;height:calc(100vh - 48px);overflow:hidden;}
+
+/* ── COL INBOX ── */
+.col-inbox{width:290px;min-width:250px;border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;}
+.col-hdr{padding:8px 13px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.col-hdr h3{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;}
+.inbox-count{font-family:var(--mono);font-size:11px;color:var(--text3);}
+
+/* ── STATS BAR ── */
+.stats-bar{padding:7px 12px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;}
+.stats-chips{display:flex;flex-wrap:wrap;gap:4px;}
+.sc{display:inline-flex;align-items:center;gap:4px;background:var(--surface3);border:1px solid var(--border);border-radius:3px;padding:2px 7px;font-size:10px;font-family:var(--mono);}
+.sc .sv{color:var(--text);font-weight:500;}
+.sc .sk{color:var(--text3);}
+.sc.c-rest{border-color:rgba(234,179,8,.3);} .sc.c-rest .sv{color:var(--yellow);}
+.sc.c-cont{border-color:rgba(59,130,246,.3);} .sc.c-cont .sv{color:var(--accent2);}
+.sc.c-deces{border-color:rgba(239,68,68,.3);} .sc.c-deces .sv{color:var(--red);}
+.sc.c-dosar{border-color:rgba(20,184,166,.3);} .sc.c-dosar .sv{color:var(--teal);}
+.sc.c-unread{border-color:rgba(34,197,94,.3);} .sc.c-unread .sv{color:var(--green);}
+.sc.sc-active{outline:2px solid currentColor;outline-offset:1px;opacity:1;font-weight:700;}
+
+.email-list{flex:1;overflow-y:auto;}
+.eitem{padding:9px 13px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;position:relative;}
+.eitem:hover{background:var(--surface2);}
+.eitem.active{background:rgba(59,130,246,.08);border-left:2px solid var(--accent);}
+.eitem.unread .ei-subj,.eitem.unread .ei-from{color:var(--text);font-weight:600;}
+.udot{position:absolute;top:11px;right:9px;width:6px;height:6px;border-radius:50%;background:var(--accent);}
+.ei-meta{display:flex;align-items:baseline;margin-bottom:2px;}
+.ei-from{font-size:16px;color:var(--text2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ei-date{font-family:var(--mono);font-size:13px;color:var(--text3);flex-shrink:0;margin-left:6px;}
+.ei-subj{font-size:16px;color:var(--text2);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ei-snip{font-size:14px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* ── COL PREVIEW ── */
+.col-preview{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+.email-view{flex:1;overflow-y:auto;padding:18px 22px;}
+.ev-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text3);gap:8px;font-size:13px;}
+.ev-subject{font-size:20px;font-weight:600;color:var(--text);margin-bottom:10px;}
+.ev-hdr-block{margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border);}
+.ev-row{display:flex;gap:6px;margin-bottom:3px;}
+.ev-lbl{font-size:14px;color:var(--text3);width:58px;flex-shrink:0;}
+.ev-val{font-size:16px;color:var(--text2);}
+.ev-body-txt{font-size:20px;line-height:1.6;color:var(--text2);white-space:pre-wrap;word-break:break-word;font-family:var(--sans);}
+.ev-body-frame{width:100%;min-height:300px;border:none;background:#fff;border-radius:4px;}
+.att-bar{margin-bottom:14px;padding:10px 12px;background:rgba(249,115,22,.05);border:1.5px solid rgba(249,115,22,.3);border-radius:7px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+.att-chip{display:flex;align-items:center;gap:7px;background:#fff;border:1.5px solid rgba(249,115,22,.5);border-radius:6px;padding:6px 13px;font-size:14px;color:var(--text2);cursor:pointer;transition:all .15s;font-weight:500;}
+.att-chip:hover{background:rgba(249,115,22,.1);border-color:var(--orange);color:var(--orange);}
+.att-chip.merge-sel{border-color:var(--accent);background:rgba(59,130,246,.1);color:var(--accent2);}
+.att-chip .att-icon{color:var(--orange);font-size:18px;}
+.att-chip-name{outline:none;border-radius:3px;padding:1px 3px;min-width:20px;}
+.att-chip-name:focus{background:rgba(249,115,22,.12);box-shadow:0 0 0 1.5px var(--orange);}
+.att-chip-name::after{content:'✎';font-size:10px;color:var(--text3);margin-left:4px;opacity:0;}
+.att-chip:hover .att-chip-name::after{opacity:1;}
+/* Attachment type picker */
+#attTypePicker{position:fixed;z-index:600;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 6px 28px rgba(0,0,0,.22);padding:8px;min-width:230px;max-width:300px;max-height:340px;display:none;flex-direction:column;gap:4px;}
+#attTypePicker input{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 9px;border-radius:5px;font-size:12px;outline:none;width:100%;}
+#attTypePickerList{overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:1px;}
+.atp-cat{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;padding:5px 4px 2px;margin-top:2px;}
+.atp-opt{font-size:12px;padding:4px 8px;border-radius:4px;cursor:pointer;color:var(--text2);}
+.atp-opt:hover{background:var(--surface3);color:var(--text);}
+.atp-opt.selected{background:rgba(37,99,235,.15);color:var(--accent);font-weight:600;}
+/* merge controls */
+.btn-merge-toggle{background:var(--surface3);border:1px solid var(--border);color:var(--text3);font-size:11px;padding:3px 9px;border-radius:4px;cursor:pointer;}
+.btn-merge-toggle:hover,.btn-merge-toggle.on{border-color:var(--teal);color:var(--teal);background:rgba(20,184,166,.08);}
+.att-merge-bar{flex-basis:100%;display:flex;gap:6px;align-items:center;padding-top:6px;border-top:1px solid var(--border);margin-top:2px;}
+.att-merge-bar input{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:11px;padding:4px 8px;border-radius:4px;outline:none;}
+.att-merge-bar input:focus{border-color:var(--accent);}
+.btn-merge-go{background:var(--teal);color:#fff;border:none;padding:4px 12px;border-radius:4px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;}
+.btn-merge-go:disabled{opacity:.5;cursor:wait;}
+.merge-status{font-size:11px;font-family:var(--mono);}
+
+/* ── REPLY ── */
+.reply-wrap{flex-shrink:0;border-top:2px solid var(--border);background:var(--surface);padding:10px 14px;display:flex;flex-direction:column;gap:7px;}
+.reply-meta{display:flex;gap:7px;}
+.reply-meta input{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:12px;padding:5px 9px;border-radius:4px;outline:none;}
+.reply-meta input:focus{border-color:var(--accent);}
+.r-to{flex:0 0 210px;}
+.r-subj{flex:1;}
+.vars-row{display:flex;flex-wrap:wrap;gap:5px;min-height:0;}
+.vchip{display:flex;align-items:center;gap:4px;background:var(--surface3);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:11px;}
+.vchip label{color:var(--text3);white-space:nowrap;}
+.vchip input{background:transparent;border:none;color:var(--accent2);font-family:var(--mono);font-size:11px;width:110px;outline:none;}
+.vchip input::placeholder{color:var(--text3);}
+#replyBody{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:18px;line-height:1.6;padding:8px 11px;border-radius:4px;resize:vertical;min-height:235px;max-height:588px;outline:none;width:100%;}
+#replyBody:focus{border-color:var(--accent);}
+/* File attach chips */
+.file-attach-row{display:flex;flex-wrap:wrap;gap:5px;}
+.fchip{display:flex;align-items:center;gap:4px;background:var(--surface3);border:1px solid rgba(249,115,22,.3);border-radius:4px;padding:2px 7px;font-size:11px;color:var(--orange);}
+.fchip button{background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px;padding:0 1px;line-height:1;}
+.fchip button:hover{color:var(--red);}
+.reply-acts{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.btn{padding:5px 14px;border-radius:4px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid transparent;transition:all .15s;}
+.btn-send{background:var(--accent);color:#fff;border:none;}
+.btn-send:hover{background:#2563eb;}
+.btn-draft{background:var(--surface3);color:var(--text2);border-color:var(--border);}
+.btn-draft:hover{color:var(--text);}
+.btn-clear{background:none;color:var(--text3);border:none;}
+.btn-clear:hover{color:var(--red);}
+.btn-attach{background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-size:11px;padding:5px 10px;border-radius:4px;cursor:pointer;transition:all .15s;}
+.btn-attach:hover{border-color:var(--orange);color:var(--orange);}
+.btn-save-tmpl{background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-size:11px;padding:5px 10px;border-radius:4px;cursor:pointer;transition:all .15s;}
+.btn-save-tmpl:hover{border-color:var(--teal);color:var(--teal);}
+.r-status{font-size:11px;font-family:var(--mono);margin-left:auto;}
+.r-status.ok{color:var(--green);}
+.r-status.err{color:var(--red);}
+
+/* ── COL SIDEBAR (right) ── */
+.col-sidebar{width:290px;min-width:250px;border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;}
+
+/* Template view */
+.sb-tmpl-view{display:flex;flex-direction:column;flex:1;overflow:hidden;}
+.ts-input{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:12px;padding:5px 9px;border-radius:4px;outline:none;}
+.ts-input:focus{border-color:var(--accent);}
+.ts-input::placeholder{color:var(--text3);}
+.tmpl-list-wrap{flex:1;overflow-y:auto;padding:6px 8px;}
+.tmpl-cat{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;padding:9px 6px 3px;font-weight:600;}
+.tcard{background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:8px 10px;margin-bottom:5px;cursor:pointer;transition:all .15s;border-left:3px solid transparent;}
+.tcard:hover{background:var(--surface3);}
+.tcard.active{border-left-color:var(--accent);background:rgba(59,130,246,.08);}
+.tc-name{font-size:21px;font-weight:500;color:var(--text);margin-bottom:1px;display:flex;align-items:center;gap:5px;}
+.tc-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.tc-desc{font-size:18px;color:var(--text3);line-height:1.4;}
+
+/* Template preview panel */
+.tmpl-preview-panel{flex-shrink:0;border-top:2px solid var(--border);background:var(--surface);display:flex;flex-direction:column;max-height:882px;}
+.tmpl-prev-hdr{padding:7px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.tmpl-prev-hdr span{font-size:11px;font-weight:600;color:var(--text2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.btn-apply{background:var(--accent);color:#fff;border:none;padding:4px 12px;border-radius:4px;font-size:11px;font-weight:500;cursor:pointer;}
+.btn-apply:hover{background:#2563eb;}
+.btn-close-prev{background:none;border:none;color:var(--text3);font-size:14px;cursor:pointer;padding:0 3px;}
+.btn-close-prev:hover{color:var(--red);}
+.tmpl-prev-body{flex:1;overflow-y:auto;padding:9px 12px;font-size:23px;color:var(--text2);white-space:pre-wrap;word-break:break-word;line-height:1.6;}
+
+/* Save template form */
+.save-tmpl-form{flex-shrink:0;border-top:2px solid var(--teal);background:var(--surface);padding:10px 12px;display:flex;flex-direction:column;gap:6px;}
+.save-tmpl-form .sf-title{font-size:11px;font-weight:600;color:var(--teal);margin-bottom:2px;}
+.save-tmpl-actions{display:flex;gap:5px;}
+/* Compose/import template form */
+.compose-tmpl-form{flex-shrink:0;border-top:2px solid var(--accent);background:var(--surface);padding:10px 12px;display:flex;flex-direction:column;gap:6px;max-height:420px;overflow-y:auto;}
+.compose-tmpl-form .cf-title{font-size:11px;font-weight:600;color:var(--accent2);margin-bottom:2px;}
+.ct-body{width:100%;min-height:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:13px;padding:6px 9px;border-radius:4px;outline:none;resize:vertical;font-family:var(--sans);line-height:1.5;}
+.ct-body:focus{border-color:var(--accent);}
+.btn-add-tmpl{background:var(--accent);color:#fff;border:none;padding:3px 9px;border-radius:4px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;}
+.btn-add-tmpl:hover{opacity:.85;}
+
+/* Attachment sidebar view */
+.col-sidebar{width:290px;min-width:250px;border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;transition:width .15s;}
+.col-sidebar.wide{width:580px;}
+.sb-att-view{display:flex;flex-direction:column;flex:1;overflow:hidden;}
+.sb-att-hdr{padding:7px 12px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.btn-back{background:none;border:none;color:var(--accent2);font-size:11px;cursor:pointer;padding:2px 0;}
+.btn-back:hover{color:var(--text);}
+.att-filename{font-size:11px;color:var(--text2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.btn-ocr{background:linear-gradient(135deg,var(--purple),var(--accent));color:#fff;border:none;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:4px;white-space:nowrap;}
+.btn-ocr:hover{opacity:.9;}
+.btn-ocr:disabled{opacity:.5;cursor:wait;}
+.att-preview-area{flex-shrink:0;height:520px;background:var(--bg);display:flex;align-items:center;justify-content:center;overflow:hidden;border-bottom:1px solid var(--border);}
+.att-preview-area img{max-width:100%;max-height:520px;object-fit:contain;display:block;}
+.att-preview-area iframe{width:100%;height:520px;border:none;display:block;}
+/* docx rendered html */
+.att-preview-area .docx-body{width:100%;height:520px;overflow-y:auto;padding:12px 16px;background:#fff;font-family:Arial,sans-serif;font-size:13px;line-height:1.5;color:#111;}
+.att-rename-bar{flex-shrink:0;padding:6px 10px;border-bottom:1px solid var(--border);display:flex;gap:5px;align-items:center;}
+.att-rename-bar input{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:11px;padding:4px 8px;border-radius:4px;outline:none;}
+.att-rename-bar input:focus{border-color:var(--accent);}
+.btn-dl{background:var(--surface3);border:1px solid var(--border);color:var(--text2);font-size:11px;padding:4px 9px;border-radius:4px;cursor:pointer;white-space:nowrap;}
+.btn-dl:hover{border-color:var(--green);color:var(--green);}
+.btn-fwd{background:var(--surface3);border:1px solid var(--border);color:var(--text2);font-size:11px;padding:4px 9px;border-radius:4px;cursor:pointer;white-space:nowrap;}
+.btn-fwd:hover{border-color:var(--accent2);color:var(--accent2);}
+/* Forward form */
+.att-fwd-form{flex-shrink:0;border-bottom:1px solid var(--border);background:var(--surface2);padding:8px 10px;display:flex;flex-direction:column;gap:5px;}
+.att-fwd-form .fwd-title{font-size:10px;font-weight:600;color:var(--accent2);text-transform:uppercase;letter-spacing:.05em;}
+.att-fwd-form input{background:var(--surface3);border:1px solid var(--border);color:var(--text);font-size:11px;padding:4px 8px;border-radius:4px;outline:none;width:100%;}
+.att-fwd-form input:focus{border-color:var(--accent);}
+.att-fwd-form input::placeholder{color:var(--text3);}
+.fwd-actions{display:flex;gap:5px;}
+.ocr-section{flex:1;overflow-y:auto;padding:10px 12px;}
+.ocr-hint{font-size:11px;color:var(--text3);line-height:1.6;}
+.ocr-field{margin-bottom:9px;}
+.ocr-field label{display:block;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;}
+.ocr-val{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:11px;color:var(--text);font-family:var(--mono);cursor:text;word-break:break-all;}
+.ocr-val:hover{border-color:var(--accent);}
+.no-key-warn{background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.3);border-radius:5px;padding:9px;font-size:11px;color:var(--yellow);line-height:1.6;}
+.ocr-actions-bar{flex-shrink:0;padding:8px 12px;border-top:1px solid var(--border);}
+.btn-insert{background:var(--teal);color:#fff;border:none;padding:6px 14px;border-radius:4px;font-size:11px;font-weight:500;cursor:pointer;width:100%;}
+.btn-insert:hover{opacity:.85;}
+.ocr-status{font-size:11px;font-family:var(--mono);text-align:center;}
+.ocr-status.ok{color:var(--green);}
+.ocr-status.err{color:var(--red);}
+.ocr-status.loading{color:var(--purple);}
+/* OCR persistent panel (stays in template sidebar) */
+.ocr-persist-panel{flex-shrink:0;border-top:2px solid var(--purple);background:var(--surface);padding:8px 12px;display:flex;flex-direction:column;gap:5px;}
+.ocr-persist-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;}
+.ocr-persist-hdr span{font-size:11px;font-weight:600;color:var(--purple);text-transform:uppercase;letter-spacing:.04em;}
+.ocr-persist-hdr button{background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;line-height:1;}
+.ocr-persist-hdr button:hover{color:var(--red);}
+.ocr-persist-fields{display:flex;flex-direction:column;gap:3px;max-height:140px;overflow-y:auto;}
+.ocr-persist-row{display:flex;gap:6px;align-items:baseline;}
+.ocr-persist-row label{font-size:9px;color:var(--text3);text-transform:uppercase;width:70px;flex-shrink:0;letter-spacing:.03em;}
+.ocr-persist-row span{font-size:11px;color:var(--text);font-family:var(--mono);word-break:break-all;}
+/* Registration modal */
+.reg-modal{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:300;display:flex;align-items:center;justify-content:center;}
+#registruModal{justify-content:flex-start;padding-left:8px;}
+#registruModal>.reg-card{width:calc(100vw - 16px);max-width:none;padding:14px 10px;}
+#registruModal #regViewTable td,#registruModal #regViewTable th{min-width:150px;font-size:13px;}
+#registruModal #regViewTable td:first-child,#registruModal #regViewTable th:first-child{min-width:40px;}
+.reg-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:22px 24px;width:900px;max-width:98vw;display:flex;flex-direction:row;gap:16px;align-items:flex-start;max-height:94vh;box-shadow:0 8px 32px rgba(0,0,0,.18);}
+.reg-form-col{flex:0 0 500px;display:flex;flex-direction:column;gap:9px;overflow-y:auto;max-height:calc(94vh - 44px);}
+.reg-preview-col{display:none;flex:1;min-width:260px;overflow-y:auto;max-height:calc(94vh - 44px);}
+.reg-preview-col.visible{display:flex;flex-direction:column;gap:8px;}
+.reg-preview-col h4{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin:0;}
+.reg-card h3{font-size:15px;font-weight:700;color:var(--text);margin-bottom:2px;}
+.reg-card .reg-sub{font-size:11px;color:var(--text3);margin-bottom:4px;}
+.reg-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.reg-field{display:flex;flex-direction:column;gap:3px;}
+.reg-field.full{grid-column:1/-1;}
+.reg-field label{font-size:11px;color:var(--text3);font-weight:500;}
+.reg-field input,.reg-field select,.reg-field textarea{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:13px;padding:6px 9px;border-radius:4px;outline:none;font-family:var(--sans);}
+.reg-field input:focus,.reg-field select:focus,.reg-field textarea:focus{border-color:var(--accent);}
+.reg-field textarea{resize:vertical;min-height:58px;}
+.reg-acts{display:flex;gap:8px;margin-top:4px;}
+.reg-preview{display:none;background:var(--surface2);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-top:4px;}
+.reg-preview table{width:100%;border-collapse:collapse;font-size:11px;}
+.reg-preview th{background:var(--surface3);color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.04em;padding:4px 8px;text-align:left;border-bottom:1px solid var(--border);}
+.reg-preview td{padding:3px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text);font-family:var(--mono);word-break:break-all;}
+.reg-preview td:first-child{color:var(--text3);width:28px;text-align:center;font-weight:600;}
+.reg-preview td:nth-child(2){color:var(--text2);width:110px;font-family:var(--sans);font-size:10px;}
+.reg-preview tr:last-child td{border-bottom:none;}
+.reg-status{font-size:11px;font-family:var(--mono);color:var(--text3);min-height:16px;}
+/* Doc type selector */
+.doc-cat-lbl{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;padding:4px 0 2px;margin-top:4px;border-top:1px solid var(--border);}
+.doc-cat-lbl:first-child{margin-top:0;border-top:none;}
+.doc-opt{display:flex;align-items:center;gap:7px;font-size:13px;padding:2px 3px;border-radius:3px;cursor:pointer;}
+.doc-opt:hover{background:var(--surface3);}
+.doc-opt input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;cursor:pointer;flex-shrink:0;}
+
+/* ── COL HISTORY ── */
+.col-history{width:315px;min-width:250px;border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;transition:width .15s;}
+.col-history.collapsed{width:28px;min-width:28px;}
+.col-history.collapsed .history-body{display:none;}
+.col-history.collapsed .col-hdr h3{display:none;}
+.hist-toggle{background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:0 2px;flex-shrink:0;}
+.hist-toggle:hover{color:var(--text);}
+.history-body{flex:1;overflow-y:auto;}
+.hitem{padding:7px 10px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;border-left:3px solid transparent;}
+.hitem:hover{background:var(--surface2);}
+.hitem.is-current{border-left-color:var(--teal);background:rgba(20,184,166,.06);}
+.hi-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;}
+.hi-dir{font-size:9px;padding:1px 5px;border-radius:3px;font-family:var(--mono);font-weight:500;}
+.hi-dir.sent{background:rgba(20,184,166,.15);color:var(--teal);}
+.hi-dir.recv{background:rgba(59,130,246,.12);color:var(--accent2);}
+.hi-date{font-family:var(--mono);font-size:9px;color:var(--text3);}
+.hi-subj{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hist-empty{padding:14px 10px;font-size:11px;color:var(--text3);text-align:center;line-height:1.6;}
+/* ── SPINNER / MISC ── */
+.spinner{display:inline-block;width:13px;height:13px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;}
+.spinner.purple{border-top-color:var(--purple);}
+@keyframes spin{to{transform:rotate(360deg);}}
+.load-row{display:flex;align-items:center;justify-content:center;padding:22px;gap:8px;font-size:12px;color:var(--text3);}
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+
+/* ── MINI STATS STRIP (bottom of inbox) ── */
+.mini-stats-strip{flex-shrink:0;border-top:1px solid var(--border);background:var(--surface);padding:7px 10px;display:flex;flex-direction:column;gap:4px;}
+.mss-title{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;justify-content:space-between;}
+.mss-rows{display:flex;flex-direction:column;gap:2px;}
+.mss-row{display:flex;align-items:center;justify-content:space-between;font-size:11px;}
+.mss-lbl{color:var(--text3);}
+.mss-val{font-family:var(--mono);font-weight:600;color:var(--text2);}
+.mss-val.c-att{color:var(--orange);}
+.mss-val.c-reg{color:var(--green);}
+.mss-bar{height:4px;background:var(--surface3);border-radius:2px;margin-top:3px;overflow:hidden;}
+.mss-fill{height:100%;border-radius:2px;background:var(--green);transition:width .4s;}
+</style>
+</head>
+<body>
+
+<!-- BI DASHBOARD TAB -->
+<a class="bi-tab" href="/bi" target="_blank" title="Deschide Analytics Dashboard">
+  <span class="bi-tab-icon">📊</span>
+  ANALYTICS
+</a>
+
+<!-- ══ SETUP ══ -->
+<div id="screenSetup" class="screen">
+  <div class="setup-card">
+    <h1>DGASMC · Dashboard Email</h1>
+    <div class="sub">Configurare inițială</div>
+    <div class="steps">
+      <b>1.</b> <code>console.cloud.google.com</code> → proiect nou<br>
+      <b>2.</b> <b>APIs &amp; Services → Library</b> → <code>Gmail API</code> → Enable<br>
+      <b>3.</b> <b>OAuth consent screen</b> → External → completează → Save<br>
+      <b>4.</b> <b>Credentials → + Create → OAuth 2.0 Client ID</b><br>
+      &nbsp;&nbsp;&nbsp;Type: <code>Web application</code> · JS Origin: <code>http://localhost:8080</code>
+    </div>
+    <div class="setup-group">
+      <label>Google OAuth Client ID *</label>
+      <div class="setup-row">
+        <input type="text" id="cidInput" placeholder="123456789-abc...apps.googleusercontent.com">
+        <button class="btn-primary" onclick="saveSetup()">Salvează →</button>
+      </div>
+    </div>
+    <div class="setup-group">
+      <label>Anthropic API Key (pentru OCR Vision — opțional)</label>
+      <input type="password" class="setup-input" id="anthroInput" placeholder="sk-ant-...">
+    </div>
+    <div class="setup-note">Datele se salvează doar local în browser (localStorage).</div>
+  </div>
+</div>
+
+<!-- ══ AUTH ══ -->
+<div id="screenAuth" class="screen hidden">
+  <div class="auth-card">
+    <h2>DGASMC · Dashboard Email</h2>
+    <p id="authCidPreview" style="font-family:var(--mono);font-size:11px;color:var(--text3)"></p>
+    <button class="auth-gmail" onclick="requestToken()">✉ &nbsp;Conectează Gmail</button>
+    <div class="auth-err hidden" id="authErr"></div>
+    <br><button id="btnChangeCid" onclick="resetSetup()">Schimbă configurația</button>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="screenApp" class="hidden" style="display:flex;flex-direction:column;height:100vh;">
+  <div class="topbar">
+    <div class="topbar-logo">DGASMC · EMAIL</div>
+    <div class="sep">│</div>
+    <span class="tb-label">Label:</span>
+    <select id="labelSel" class="tb-select" style="min-width:150px" onchange="loadEmails()">
+      <option value="">— toate —</option>
+    </select>
+    <span class="tb-label">Zile:</span>
+    <input type="number" id="daysIn" class="tb-input" value="2" min="1" max="90" style="width:52px" onchange="loadEmails()">
+    <button class="tb-btn" id="btnUnread" onclick="toggleUnread()">Necitite</button>
+    <button class="tb-btn" onclick="loadEmails()">↺</button>
+    <div class="sep">│</div>
+    <span class="tb-label">Operator:</span>
+    <input type="text" id="opInput" class="tb-input" placeholder="Nume Prenume" style="width:130px"
+           onchange="localStorage.setItem('op',this.value)">
+    <div id="senderNameBar" style="display:none;align-items:center;gap:4px;border:1px solid var(--border);border-radius:6px;padding:2px 8px;background:var(--surface2)">
+      <span class="tb-label" style="font-size:11px;color:var(--text2)">Expeditor:</span>
+      <input id="senderNume"    type="text" class="tb-input" placeholder="Nume"    style="width:90px;font-size:11px" title="Nume familie expeditor">
+      <button onclick="swapSenderName()" title="Inversează Nume ↔ Prenume" style="background:none;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:12px;padding:1px 5px;color:var(--text2)">⇄</button>
+      <input id="senderPrenume" type="text" class="tb-input" placeholder="Prenume" style="width:90px;font-size:11px" title="Prenume expeditor">
+    </div>
+    <div class="tb-right">
+      <span class="token-warn hidden" id="tokenWarn" onclick="requestToken()">⚠ Sesiune expirată</span>
+      <button class="tb-btn" onclick="composeNew()" title="Email nou" style="background:rgba(34,197,94,.08);border-color:#22c55e;color:#22c55e">✉ Email nou</button>
+      <button class="tb-btn" onclick="showRegistruViewer()" title="Vizualizează Registrul R43/2026" style="background:rgba(37,99,235,.1);border-color:var(--accent);color:var(--accent)">📊 Registru</button>
+      <a href="/bi" target="_blank" class="tb-btn" title="Analytics Dashboard" style="background:rgba(6,182,212,.1);border-color:#06b6d4;color:#06b6d4;text-decoration:none">📈 Analytics</a>
+      <button class="tb-btn" onclick="resetSetup()" title="Setări">⚙</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- COL 1: INBOX -->
+    <div class="col-inbox">
+      <div class="col-hdr">
+        <h3>Inbox</h3>
+        <span class="inbox-count" id="inboxCnt">—</span>
+      </div>
+      <div class="stats-bar" id="statsBar" style="display:none">
+        <div class="stats-chips" id="statsChips"></div>
+      </div>
+      <div class="email-list" id="emailList">
+        <div class="load-row"><div class="spinner"></div> Se încarcă...</div>
+      </div>
+      <!-- MINI STATS STRIP -->
+      <div class="mini-stats-strip" id="miniStats">
+        <div class="mss-title">
+          <span>📎 Statistici sesiune</span>
+        </div>
+        <div class="mss-rows">
+          <div class="mss-row"><span class="mss-lbl">Emailuri încărcate</span><span class="mss-val" id="mssTotal">—</span></div>
+          <div class="mss-row"><span class="mss-lbl">Cu atașamente (vizionate)</span><span class="mss-val c-att" id="mssWithAtt">0</span></div>
+          <div class="mss-row"><span class="mss-lbl">Înregistrate în Registru</span><span class="mss-val c-reg" id="mssReg">0</span></div>
+        </div>
+        <div class="mss-bar"><div class="mss-fill" id="mssFill" style="width:0%"></div></div>
+      </div>
+    </div>
+
+    <!-- COL 2: PREVIEW + REPLY -->
+    <div class="col-preview">
+      <div class="email-view" id="emailView">
+        <div class="ev-empty"><span style="font-size:32px">✉</span><span>Selectează un email</span></div>
+      </div>
+      <div class="reply-wrap hidden" id="replyWrap">
+        <div class="reply-meta">
+          <input type="text" id="rTo" class="r-to" placeholder="Către:">
+          <input type="text" id="rSubj" class="r-subj" placeholder="Subiect:">
+        </div>
+        <div class="vars-row" id="varsRow"></div>
+        <div class="file-attach-row" id="fileAttachRow"></div>
+        <textarea id="replyBody" placeholder="Selectează template din dreapta sau scrie direct..."></textarea>
+        <div class="reply-acts">
+          <button class="btn btn-send" onclick="doSend()">▶ Trimite</button>
+          <button class="btn btn-draft" onclick="doDraft()">⎙ Draft</button>
+          <button class="btn-attach" onclick="document.getElementById('fileInput').click()">📎 Atașează</button>
+          <button class="btn-save-tmpl" onclick="showSaveTmplForm()">⊕ Salv. template</button>
+          <button class="btn btn-clear" onclick="clearReply()">✕</button>
+          <span class="r-status" id="rStatus"></span>
+        </div>
+        <input type="file" id="fileInput" multiple style="display:none" onchange="onFilesSelected(this.files)">
+      </div>
+    </div>
+
+    <!-- COL 3: SIDEBAR (Templates + Attachment preview) -->
+    <div class="col-sidebar">
+      <!-- TEMPLATE VIEW -->
+      <div id="sbTmplView" class="sb-tmpl-view">
+        <div class="col-hdr">
+          <h3>Templates</h3>
+          <div style="display:flex;gap:5px;align-items:center">
+            <span id="customTmplCnt" style="font-family:var(--mono);font-size:10px;color:var(--text3)"></span>
+            <button class="btn-add-tmpl" onclick="showComposeTmpl()" title="Compune template nou">✏</button>
+            <button class="btn-add-tmpl" style="background:var(--teal)" onclick="document.getElementById('tmplDocxInput').click()" title="Importă din .docx">📄</button>
+            <input type="file" id="tmplDocxInput" accept=".docx" style="display:none" onchange="importDocxTemplate()">
+          </div>
+        </div>
+        <div style="padding:8px;border-bottom:1px solid var(--border);flex-shrink:0;">
+          <input type="text" class="ts-input" id="tmplSearch" placeholder="Caută..." oninput="filterTmpl()">
+        </div>
+        <div class="tmpl-list-wrap" id="tmplList"></div>
+
+        <!-- OCR persistent panel (stays visible when switching views) -->
+        <div id="ocrPersistPanel" class="ocr-persist-panel hidden">
+          <div class="ocr-persist-hdr">
+            <span>✦ Date OCR</span>
+            <button onclick="clearPersistOcr()" title="Șterge">✕</button>
+          </div>
+          <div class="ocr-persist-fields" id="ocrPersistFields"></div>
+          <button class="btn-insert" style="margin-top:4px" onclick="insertOCRToReply()">→ Inserează în reply</button>
+          <button class="btn-insert" style="margin-top:3px;background:var(--accent)" onclick="showRegModal()">📋 Înregistrează în Registru</button>
+        </div>
+
+        <!-- Template preview panel (hidden until template selected) -->
+        <div id="tmplPreviewPanel" class="tmpl-preview-panel hidden">
+          <div class="tmpl-prev-hdr">
+            <span id="tmplPrevName"></span>
+            <button class="btn-apply" onclick="applySelectedTmpl()">Aplică</button>
+            <button class="btn-close-prev" onclick="closeTmplPreview()" title="Închide">✕</button>
+          </div>
+          <div class="tmpl-prev-body" id="tmplPrevBody"></div>
+        </div>
+
+        <!-- Save template form (hidden until triggered) -->
+        <div id="saveTmplForm" class="save-tmpl-form hidden">
+          <div class="sf-title">⊕ Salvează ca template nou</div>
+          <input type="text" class="ts-input" id="stName" placeholder="Nume template">
+          <input type="text" class="ts-input" id="stCat" placeholder="Categorie (ex: Restanțe)">
+          <div class="save-tmpl-actions">
+            <button class="btn btn-send" style="flex:1;font-size:11px" onclick="doSaveTemplate()">Salvează</button>
+            <button class="btn btn-clear" onclick="hideSaveTmplForm()">✕</button>
+          </div>
+        </div>
+
+        <!-- Compose / import template form -->
+        <div id="composeTmplForm" class="compose-tmpl-form hidden">
+          <div class="cf-title">✏ Template nou</div>
+          <input type="text" class="ts-input" id="ctName" placeholder="Nume template">
+          <input type="text" class="ts-input" id="ctCat" placeholder="Categorie (ex: Restanțe, Dosar...)">
+          <textarea class="ct-body" id="ctBody" placeholder="Textul template-ului (fără antet/semnătură — se adaugă automat)"></textarea>
+          <div class="save-tmpl-actions">
+            <button class="btn btn-send" style="flex:1;font-size:11px" onclick="doComposeTmpl()">💾 Salvează</button>
+            <button class="btn btn-clear" onclick="hideComposeTmpl()">✕</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ATTACHMENT VIEW (hidden until attachment clicked) -->
+      <div id="sbAttView" class="sb-att-view hidden">
+        <div class="sb-att-hdr">
+          <button class="btn-back" onclick="closeAttSidebar()">← Templates</button>
+          <span class="att-filename" id="attSidebarName">—</span>
+          <button class="tb-btn" id="btnExpandSb" onclick="toggleSidebarWide()" title="Lărgește / îngustează">⤢</button>
+          <button class="btn-ocr" id="btnOCR" onclick="runOCR()">✦ OCR</button>
+        </div>
+        <div class="att-preview-area" id="attPreviewArea">
+          <div class="load-row"><div class="spinner"></div></div>
+        </div>
+        <div class="att-rename-bar">
+          <input type="text" id="attRename" placeholder="Redenumire...">
+          <button class="btn-dl" onclick="doDownload()" title="Descarcă cu numele din câmp">↓</button>
+          <button class="btn-fwd" onclick="toggleFwdForm()" title="Transmite atașament">↗ Trimite</button>
+        </div>
+        <!-- Forward form -->
+        <div id="attFwdForm" class="att-fwd-form hidden">
+          <div class="fwd-title">↗ Transmite atașament</div>
+          <input type="email" id="fwdTo" placeholder="Către: email@exemplu.ro">
+          <input type="text"  id="fwdSubj" placeholder="Subiect:">
+          <input type="text"  id="fwdMsg" placeholder="Mesaj scurt (opțional)">
+          <div class="fwd-actions">
+            <button class="btn btn-send" style="flex:1;font-size:11px" onclick="doForwardAtt()">▶ Trimite</button>
+            <button class="btn btn-clear" onclick="toggleFwdForm()">✕</button>
+            <span id="fwdStatus" style="font-size:11px;font-family:var(--mono);margin-left:4px"></span>
+          </div>
+        </div>
+        <div class="ocr-section" id="ocrSection">
+          <div id="ocrHint"></div>
+        </div>
+        <div class="ocr-actions-bar hidden" id="ocrActions">
+          <button class="btn-insert" onclick="insertOCRToReply()">→ Inserează în reply</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- COL 4: HISTORY -->
+    <div class="col-history" id="colHistory">
+      <div class="col-hdr" style="justify-content:space-between">
+        <h3 style="white-space:nowrap">Istoric</h3>
+        <button class="hist-toggle" onclick="toggleHistory()" title="Ascunde/Arată">◀</button>
+      </div>
+      <div class="history-body" id="historyBody">
+        <div class="hist-empty">Selectează un email pentru a vedea istoricul conversației</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ATTACHMENT TYPE PICKER POPUP -->
+<div id="attTypePicker" style="display:none;flex-direction:column;gap:4px;position:fixed;z-index:600;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 6px 28px rgba(0,0,0,.22);padding:8px;min-width:230px;max-width:300px;max-height:340px;">
+  <input type="text" id="attTypeSearch" placeholder="Caută tip document..." oninput="filterAttTypePicker(this.value)"
+    style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 9px;border-radius:5px;font-size:12px;outline:none;width:100%;">
+  <div id="attTypePickerList" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:1px;"></div>
+  <div style="border-top:1px solid var(--border);padding-top:5px;margin-top:2px;">
+    <button id="attTypeOpenSidebar" style="width:100%;background:var(--surface3);border:1px solid var(--border);color:var(--text2);font-size:11px;padding:4px 8px;border-radius:4px;cursor:pointer;">↗ Deschide previzualizare</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" onload="gsiReady()" async></script>
+<script>
+// ══════════════════════════════════════════════════════════
+// CONSTANTS
+// ══════════════════════════════════════════════════════════
+const SCOPES = 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/spreadsheets';
+const BASE   = 'https://gmail.googleapis.com/gmail/v1/users/me';
+const CLAUDE = 'https://api.anthropic.com/v1/messages';
+const SHEETS_ID   = '1xFTA80PFIlByy29dBTNfcgeJn9FOXmeEOLCi18Gy6hs';
+const SHEETS_BASE = 'https://sheets.googleapis.com/v4/spreadsheets';
+const SHEET_NAME  = 'Registru E mail 43 2026';
+
+const HEADER = `Stimată(e) doamnă/domnule,\n\n`;
+const FOOTER = `\n\nCu stimă,\n{OP}\nServiciul Stimulent Financiar Adulți cu Handicap\nDirecția Generală de Asistență Socială a Municipiului București\nStr. Constantin Mille, nr. 10, sector 1, București\nTel. +4 021 314.23.15, tasta 1\nhttps://www.dgas.ro/stimulent-pentru-integrarea-sociala-a-persoanelor-adulte-cu-handicap/\n\n⚠ Modificări (CI, domiciliu, deces, cont, tutore) — anunțați în 48h.\n⚠ Verificați situația fiscală la DITL în lunile martie și septembrie.`;
+
+const TEMPLATES_BUILTIN = [
+  {id:'T1',name:'Lipsă fonduri — scurt',cat:'Restanțe',color:'#22c55e',desc:'Răspuns rapid, fără detalii tehnice',
+   body:'Vă informăm că plata stimulentului este amânată din lipsa de fonduri.\nNu putem estima când se va relua.\n\nNe exprimăm regretul pentru dificultățile pe care le întâmpinați, dar vă asigurăm că depunem constant toate diligențele pentru remedierea situației.'},
+  {id:'T2',name:'PMB nu a alocat fondurile',cat:'Restanțe',color:'#eab308',desc:'Prim contact, plăți generale',
+   body:'Vă informăm că, momentan, Primăria Municipiului București nu a alocat fondurile necesare pentru plata stimulentului de integrare socială.\n\nPlățile sunt condiționate de aprobarea noului buget anual, drept urmare, nu putem estima o dată exactă a plăților.\n\nVă mulțumim pentru înțelegere!'},
+  {id:'T3',name:'Plăți amânate + ultima plată',cat:'Restanțe',color:'#eab308',desc:'Status cu data ultimei plăți',
+   body:'Plățile sunt momentan amânate, ele fiind condiționate de aprobarea noului buget anual, motiv pentru care nu putem estima o dată exactă pentru următoarea plată.\n\nUltima plată efectuată de instituția noastră către beneficiarii eligibili a fost pe 25.11.2025 și reprezintă stimulentul aferent lunii aprilie 2024, tranșa a doua, 250 lei/beneficiar.'},
+  {id:'T4',name:'Dosar aprobat + status complet',cat:'Restanțe',color:'#3b82f6',desc:'Dosar aprobat, când primesc prima plată',
+   body:'Cererea dumneavoastră cu nr. {NR_CERERE} este aprobată și eligibilă la plată începând cu luna {LUNA_ELIGIBILA}.\n\nDin motive ce țin de limita fondurilor alocate instituției noastre, plata stimulentului este efectuată cu întârziere. Ultima plată efectuată de instituția noastră a fost pe 25.11.2025 — stimulentul aferent lunii aprilie 2024, tranșa a doua, 250 lei/beneficiar. Nu au fost realizate plăți pentru lunile aprilie 2024 tranșa 3 – prezent.\n\nValoarea stimulentului este de 500 lei/lună/beneficiar. Plata se realizează cronologic, egal între toți beneficiarii.\n\nPlățile sunt amânate, condiționate de aprobarea noului buget anual. Nu putem estima data plății aferente lunii {LUNA_ELIGIBILA}.'},
+  {id:'T5',name:'Estimare buget — aprilie',cat:'Restanțe',color:'#a855f7',desc:'Beneficiar persistent, vrea dată concretă',
+   body:'Nu avem actualmente bugetul aprobat. Totul depinde de aprobarea bugetului de către Consiliul General, care cel mai probabil va fi în luna aprilie.\n\nVom publica oficial pe site-ul instituției când avem Hotărârea de Consiliu cu sumele aprobate.'},
+  {id:'T6',name:'Mecanisme tranșe 500/375/250 lei',cat:'Restanțe',color:'#f97316',desc:'Sume variate, cum funcționează tranșele',
+   body:'Stimulentul este în valoare de 500 lei, dar în funcție de disponibilul financiar acordat se plătește 500, 375 sau 250 lei. Nu se trece la plata lunii următoare până nu se închide suma de 500 lei pentru luna respectivă.\n\nValoarea plății nu este predictibilă — depinde de disponibilul financiar acordat de Primăria Capitalei. Se ține cont de valoarea lunară, astfel încât stimulentul fiecărei luni să totalizeze 500 lei, chiar dacă înseamnă 2-3 tranșe.\n\nMomentul, Primăria Municipiului București nu a alocat fondurile necesare. Plățile sunt condiționate de aprobarea noului buget anual.\n\nNe exprimăm regretul pentru dificultățile întâmpinate.'},
+  {id:'T7',name:'Confirmare înregistrare documente',cat:'Înregistrare',color:'#14b8a6',desc:'Acte primite, număr de înregistrare',
+   body:'Numărul de înregistrare al documentelor transmise instituției noastre este: {NR_INREGISTRARE}, iar acestea vor fi procesate în cel mai scurt timp posibil.'},
+  {id:'T8',name:'Acte necesare deces — sume neîncasate',cat:'Deces',color:'#ef4444',desc:'Moștenitor solicită sume restante',
+   body:'Pentru a intra în posesia sumei rămasă neîncasată, reprezentând stimulentul aferent lunilor restante, aveți nevoie de următoarele documente:\n\n• Certificat de moștenitor sau de calitate de moștenitor\n• Copie act de identitate moștenitor\n• Extras de cont pe numele moștenitorului\n• Certificat de deces (copie)\n\nDocumentele se pot transmite pe această adresă de email sau depune la sediul nostru.'},
+  {id:'T9',name:'Reînnoire certificat — nu e necesar',cat:'Dosar',color:'#60a5fa',desc:'Nu trebuie trimis noul certificat de handicap',
+   body:'Vă informăm că nu este obligatoriu să aduceți/trimiteți noul certificat de încadrare în grad de handicap, dacă aveți continuitate, deoarece veți fi raportat în mod automat de către Direcția Generală de Asistență Socială și Protecția Copilului din sectorul dumneavoastră.'},
+  {id:'T10',name:'Cerere deja înregistrată',cat:'Dosar',color:'#60a5fa',desc:'Solicitarea a mai fost trimisă anterior',
+   body:'Vă informăm că solicitarea de mai sus a mai fost transmisă și a primit numărul de înregistrare: {NR_INREGISTRARE}. Veți primi un răspuns în termenul legal prevăzut de reglementările în vigoare.'},
+];
+
+// ══════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════
+let TOKEN='', TOKEN_EXP=0, tokenClient=null;
+let curEmail=null, unreadOnly=false;
+let ocrData=null, curAttB64=null, curAttMime=null, curAttFilename='';
+let attRenames={}; // { attachmentId: renamedFilename }
+let attSelectedDocTypes={}; // { attachmentId: doctype string }
+let _curPickerAttId=null, _curPickerMsgId=null, _curPickerFilename='', _curPickerMime='', _curPickerSize=0;
+let _emailsWithAtts=new Set(); // email IDs seen with attachments
+let _emailsRegistered=new Set(); // email IDs registered this session
+let _composeMode=false; // true = new email, not a reply
+let persistOcrData=null, curEmailMeta=null;
+let _lastSenderEmail='', _lastSenderName='', _lastThreadId='', _lastMsgId='', _lastSubject='';
+let _senderNume='', _senderPrenume='';
+
+function parseSenderName(from) {
+  const cap = w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+
+  // 1. Display name parts (e.g. "Tascau Cris" → ["Tascau","Cris"])
+  const display = senderName(from);
+  const dParts = display.trim().split(/\s+/).filter(Boolean);
+
+  // 2. Email local-part parts (e.g. "cristina_tascau" → ["Cristina","Tascau"])
+  const emailLocal = extractEmail(from).split('@')[0] || '';
+  const eParts = emailLocal
+    .replace(/[._\-+]/g, ' ').trim()
+    .split(/\s+/).filter(w => w.length > 1 && !/^\d+$/.test(w))
+    .map(cap);
+
+  // 3. Build initial guess from display name
+  let nume = '', prenume = '';
+  if (dParts.length >= 2) {
+    nume = dParts[0]; prenume = dParts.slice(1).join(' ');
+  } else if (dParts.length === 1) {
+    nume = dParts[0];
+  }
+
+  // 4. Cross-reference: if an email part starts with a display part but is longer, use the fuller form
+  //    e.g. display prenume "Cris" + email part "Cristina" → use "Cristina"
+  if (eParts.length >= 2) {
+    const expand = (val) => {
+      const lo = val.toLowerCase();
+      const better = eParts.find(ep => ep.toLowerCase().startsWith(lo) && ep.length > val.length);
+      return better || val;
+    };
+    if (nume)    nume    = expand(nume);
+    if (prenume) prenume = expand(prenume);
+
+    // 5. If display had only 1 word, try to find the second name from email
+    if (!prenume && eParts.length >= 2) {
+      const numeL = nume.toLowerCase();
+      const matched = eParts.find(ep => ep.toLowerCase().startsWith(numeL));
+      const other   = eParts.find(ep => !ep.toLowerCase().startsWith(numeL));
+      if (matched) { nume = matched; prenume = other || ''; }
+      else { prenume = eParts.slice(0, -1).join(' '); nume = eParts[eParts.length-1]; }
+    }
+  } else if (!prenume && eParts.length === 1 && !eParts[0].toLowerCase().startsWith(nume.toLowerCase())) {
+    prenume = eParts[0];
+  }
+
+  return { nume: cap(nume), prenume: prenume ? cap(prenume) : '' };
+}
+let selectedTmpl=null;
+let attachedFiles=[]; // [{name, type, data (base64)}]
+let curAtts=[], mergeMode=false;
+let allEmails=[], activeFilter=null;
+let TEMPLATES=[...TEMPLATES_BUILTIN];
+
+// ══════════════════════════════════════════════════════════
+// SETUP & AUTH
+// ══════════════════════════════════════════════════════════
+function gsiReady() {
+  const cid = localStorage.getItem('clientId');
+  if (!cid) { show('screenSetup'); return; }
+  initTC(cid);
+  show('screenAuth');
+  document.getElementById('authCidPreview').textContent = cid.slice(0,40)+'...';
+}
+
+function saveSetup() {
+  const cid    = document.getElementById('cidInput').value.trim();
+  const anthro = document.getElementById('anthroInput').value.trim();
+  if (!cid) return;
+  localStorage.setItem('clientId', cid);
+  if (anthro) localStorage.setItem('anthroKey', anthro);
+  initTC(cid);
+  show('screenAuth');
+  document.getElementById('authCidPreview').textContent = cid.slice(0,40)+'...';
+}
+
+function initTC(cid) {
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: cid, scope: SCOPES,
+    callback: onToken, error_callback: onAuthErr,
+  });
+}
+
+function requestToken() {
+  document.getElementById('tokenWarn').classList.add('hidden');
+  tokenClient.requestAccessToken({ prompt: TOKEN ? '' : 'consent' });
+}
+
+function onToken(resp) {
+  if (resp.error) { onAuthErr(resp); return; }
+  TOKEN     = resp.access_token;
+  TOKEN_EXP = Date.now() + (parseInt(resp.expires_in)-60)*1000;
+  show('screenApp');
+  document.getElementById('opInput').value = localStorage.getItem('op')||'';
+  appInit();
+}
+function onAuthErr(e) {
+  const el=document.getElementById('authErr');
+  el.textContent='✕ '+(e.error||JSON.stringify(e));
+  el.classList.remove('hidden');
+}
+function resetSetup() { localStorage.removeItem('clientId'); show('screenSetup'); }
+function show(id) {
+  ['screenSetup','screenAuth','screenApp'].forEach(s=>{
+    const el=document.getElementById(s);
+    el.classList.add('hidden'); el.style.display='';
+  });
+  const el=document.getElementById(id);
+  el.classList.remove('hidden');
+  if (id==='screenApp') el.style.display='flex';
+}
+
+// ══════════════════════════════════════════════════════════
+// API
+// ══════════════════════════════════════════════════════════
+async function api(url, opts={}, base='gmail') {
+  if (Date.now()>TOKEN_EXP) {
+    document.getElementById('tokenWarn').classList.remove('hidden');
+    throw new Error('Token expirat — apasă "Sesiune expirată" pentru reautorizare');
+  }
+  // base='sheets' means url is already full sheets URL; 'gmail' uses BASE prefix via caller
+  const res = await fetch(url, {
+    ...opts, headers:{
+      'Authorization':'Bearer '+TOKEN,
+      'Content-Type':'application/json',
+      ...(opts.headers||{})
+    }
+  });
+  if (!res.ok) throw new Error(res.status+': '+await res.text());
+  return res.json();
+}
+
+function decode64(data) {
+  try {
+    const b=atob(data.replace(/-/g,'+').replace(/_/g,'/'));
+    const bytes=new Uint8Array(b.length);
+    for(let i=0;i<b.length;i++) bytes[i]=b.charCodeAt(i);
+    return new TextDecoder('utf-8').decode(bytes);
+  } catch { return ''; }
+}
+
+function stripQuoted(text) {
+  const lines = text.split('\n');
+  const out = [];
+  for (const line of lines) {
+    // Stop at common reply/quote markers
+    if (/^>/.test(line)) break;
+    if (/^On .{5,}wrote:/i.test(line)) break;
+    if (/^-{3,}\s*(Original Message|Mesaj original|Forwarded|Reply)/i.test(line)) break;
+    if (/^_{5,}/.test(line)) break;
+    if (/^From:\s*.+\nSent:\s*/i.test(line)) break;
+    if (/^\[cid:/i.test(line)) break;
+    out.push(line);
+  }
+  return out.join('\n').trimEnd();
+}
+
+function extractBody(payload) {
+  let plain='',html='';
+  function walk(p) {
+    const mime=p.mimeType||'',data=p.body?.data||'';
+    if (mime==='text/plain'&&data&&!plain) plain=decode64(data);
+    else if (mime==='text/html'&&data&&!html) html=decode64(data);
+    (p.parts||[]).forEach(walk);
+  }
+  walk(payload);
+  return plain?{body:plain,isHtml:false}:{body:html,isHtml:true};
+}
+
+function extractAtts(payload) {
+  const r=[];
+  function walk(p) {
+    if(p.filename) r.push({filename:p.filename,mimeType:p.mimeType,size:p.body?.size||0,attachmentId:p.body?.attachmentId||''});
+    (p.parts||[]).forEach(walk);
+  }
+  walk(payload); return r;
+}
+
+function buildMime({to,subject,body,inReplyTo,files}) {
+  if (!files || !files.length) {
+    // Simple plain text message
+    const bodyB64=btoa(unescape(encodeURIComponent(body)));
+    const lines=['MIME-Version: 1.0','Content-Type: text/plain; charset=utf-8',
+      'Content-Transfer-Encoding: base64',`To: ${to}`,`Subject: ${subject}`];
+    if(inReplyTo){lines.push(`In-Reply-To: ${inReplyTo}`);lines.push(`References: ${inReplyTo}`);}
+    lines.push('',bodyB64);
+    const raw=lines.join('\r\n');
+    try{return btoa(unescape(encodeURIComponent(raw))).replace(/\+/g,'-').replace(/\//g,'_');}
+    catch{return btoa(raw).replace(/\+/g,'-').replace(/\//g,'_');}
+  }
+  // Multipart with attachments
+  const boundary='dgasmc'+Date.now();
+  const bodyB64=btoa(unescape(encodeURIComponent(body)));
+  let mime=`MIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary="${boundary}"\r\nTo: ${to}\r\nSubject: ${subject}\r\n`;
+  if(inReplyTo) mime+=`In-Reply-To: ${inReplyTo}\r\nReferences: ${inReplyTo}\r\n`;
+  mime+=`\r\n--${boundary}\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Transfer-Encoding: base64\r\n\r\n${bodyB64}\r\n`;
+  for(const f of files) {
+    mime+=`--${boundary}\r\nContent-Type: ${f.type||'application/octet-stream'}; name="${f.name}"\r\n`;
+    mime+=`Content-Disposition: attachment; filename="${f.name}"\r\nContent-Transfer-Encoding: base64\r\n\r\n${f.data}\r\n`;
+  }
+  mime+=`--${boundary}--`;
+  // Encode as base64url (handle non-ASCII via Uint8Array)
+  const bytes=new TextEncoder().encode(mime);
+  let bin=''; bytes.forEach(b=>bin+=String.fromCharCode(b));
+  return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_');
+}
+
+// ══════════════════════════════════════════════════════════
+// APP INIT
+// ══════════════════════════════════════════════════════════
+function appInit() {
+  loadCustomTemplates();
+  renderTemplates(TEMPLATES);
+  loadLabels();
+  loadEmails();
+}
+
+// ══════════════════════════════════════════════════════════
+// LABELS
+// ══════════════════════════════════════════════════════════
+// System labels that use in:X query syntax
+const SYSTEM_LABELS=[
+  {value:'in:inbox',  label:'📥 Inbox'},
+  {value:'in:sent',   label:'📤 Trimise'},
+  {value:'in:drafts', label:'📝 Ciorne'},
+  {value:'in:starred',label:'⭐ Stea'},
+  {value:'in:spam',   label:'🚫 Spam'},
+];
+
+async function loadLabels() {
+  const sel=document.getElementById('labelSel');
+  // Add system labels first
+  const grpSys=document.createElement('optgroup'); grpSys.label='— Sistem —';
+  for(const s of SYSTEM_LABELS){
+    const o=document.createElement('option'); o.value=s.value; o.textContent=s.label;
+    grpSys.appendChild(o);
+  }
+  sel.appendChild(grpSys);
+
+  // Add user labels
+  const data=await api(`${BASE}/labels`);
+  const labels=(data.labels||[]).filter(l=>l.type==='user').sort((a,b)=>a.name.localeCompare(b.name));
+  const grpUser=document.createElement('optgroup'); grpUser.label='— Etichete —';
+  const prio=labels.filter(l=>l.name.startsWith('Sector'));
+  const rest=labels.filter(l=>!l.name.startsWith('Sector'));
+  for(const l of [...prio,...rest]) {
+    const o=document.createElement('option');
+    o.value=l.name; o.textContent=l.name;
+    if(l.name==='Sector 2') o.selected=true;
+    grpUser.appendChild(o);
+  }
+  sel.appendChild(grpUser);
+}
+
+// ══════════════════════════════════════════════════════════
+// EMAILS
+// ══════════════════════════════════════════════════════════
+async function loadEmails() {
+  const label=document.getElementById('labelSel').value;
+  const days=parseInt(document.getElementById('daysIn').value)||7;
+  const list=document.getElementById('emailList');
+  list.innerHTML='<div class="load-row"><div class="spinner"></div> Se încarcă...</div>';
+  document.getElementById('statsBar').style.display='none';
+
+  const after=new Date(Date.now()-days*86400000).toISOString().slice(0,10).replace(/-/g,'/');
+  let q=`after:${after}`;
+  if(unreadOnly) q+=' is:unread';
+  if(label) {
+    // System labels use in:X directly; user labels use label:"name"
+    if(label.startsWith('in:')) q=`${label} ${q}`;
+    else q=`label:"${label}" ${q}`;
+  }
+
+  try {
+    const data=await api(`${BASE}/messages?${new URLSearchParams({q,maxResults:60})}`);
+    const msgs=data.messages||[];
+    if(!msgs.length){
+      list.innerHTML='<div class="load-row" style="color:var(--text3)">Niciun email</div>';
+      document.getElementById('inboxCnt').textContent='0'; return;
+    }
+    const meta=[];
+    for(let i=0;i<msgs.length;i+=8) {
+      const batch=await Promise.all(msgs.slice(i,i+8).map(m=>
+        api(`${BASE}/messages/${m.id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`)
+      ));
+      meta.push(...batch);
+      const partial=buildEmailList(meta);
+      document.getElementById('inboxCnt').textContent=partial.length+'/'+msgs.length;
+      renderEmailList(partial);
+    }
+    const emails=buildEmailList(meta);
+    allEmails=emails; activeFilter=null;
+    document.getElementById('inboxCnt').textContent=emails.length+' msg';
+    renderEmailList(emails);
+    renderStats(emails);
+    updateMiniStats();
+  } catch(e) {
+    list.innerHTML=`<div class="load-row" style="color:var(--red)">Eroare: ${esc(e.message)}</div>`;
+  }
+}
+
+function buildEmailList(meta) {
+  return meta.map(md=>{
+    const h=Object.fromEntries((md.payload?.headers||[]).map(x=>[x.name,x.value]));
+    return {id:md.id,threadId:md.threadId,from:h.From||'',subject:h.Subject||'(fără subiect)',
+      date:h.Date||'',internalDate:parseInt(md.internalDate)||0,
+      snippet:md.snippet||'',unread:(md.labelIds||[]).includes('UNREAD')};
+  }).sort((a,b)=>b.internalDate-a.internalDate);
+}
+
+function renderEmailList(emails) {
+  document.getElementById('emailList').innerHTML=emails.map(e=>`
+    <div class="eitem ${e.unread?'unread':''}" onclick="viewEmail('${e.id}')" id="ei-${e.id}">
+      ${e.unread?'<div class="udot"></div>':''}
+      <div class="ei-meta">
+        <div class="ei-from">${esc(senderName(e.from))}</div>
+        <div class="ei-date">${fmtDate(e.internalDate)}</div>
+      </div>
+      <div class="ei-subj">${esc(e.subject)}</div>
+      <div class="ei-snip">${esc(e.snippet)}</div>
+    </div>`).join('');
+}
+
+function toggleUnread(){
+  unreadOnly=!unreadOnly;
+  document.getElementById('btnUnread').classList.toggle('on',unreadOnly);
+  loadEmails();
+}
+
+// ══════════════════════════════════════════════════════════
+// STATS
+// ══════════════════════════════════════════════════════════
+function categorize(e) {
+  const t=(e.subject+' '+e.snippet).toLowerCase();
+  if(/restant|plat|stimulent|indemniza|fonduri|buget|achitar/.test(t)) return 'Restanțe';
+  if(/cont|iban|bancar|extras cont|banca/.test(t)) return 'Cont bancar';
+  if(/deces|decedat|mort|mostenitor/.test(t)) return 'Deces';
+  if(/dosar|complet|document|certif|handicap|ci |buletin|carte de identitate/.test(t)) return 'Dosar';
+  return 'Altele';
+}
+
+function renderStats(emails) {
+  const cats={};
+  let unread=0;
+  emails.forEach(e=>{
+    const c=categorize(e);
+    cats[c]=(cats[c]||0)+1;
+    if(e.unread) unread++;
+  });
+  const colorMap={'Restanțe':'c-rest','Cont bancar':'c-cont','Deces':'c-deces','Dosar':'c-dosar','Altele':''};
+  const chips=Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([k,v])=>
+    `<div class="sc ${colorMap[k]||''} ${activeFilter===k?'sc-active':''}" style="cursor:pointer" onclick="setFilter('${k}')" title="Filtrează: ${k}">
+      <span class="sv">${v}</span><span class="sk">${k}</span>
+    </div>`
+  ).join('');
+  const unreadActive=activeFilter==='__unread__';
+  const extra=`<div class="sc c-unread ${unreadActive?'sc-active':''}" style="cursor:pointer" onclick="setFilter('__unread__')" title="Filtrează: necitite">
+    <span class="sv">${unread}</span><span class="sk">necitite</span>
+  </div>`;
+  const resetBtn=activeFilter
+    ? `<div class="sc" style="cursor:pointer;border-color:var(--red);color:var(--red)" onclick="setFilter(null)" title="Șterge filtru">✕ tot</div>`
+    : '';
+  document.getElementById('statsChips').innerHTML=chips+extra+resetBtn;
+  document.getElementById('statsBar').style.display='block';
+}
+
+function setFilter(cat) {
+  activeFilter = activeFilter===cat ? null : cat; // toggle
+  let filtered;
+  if(!activeFilter) {
+    filtered=allEmails;
+  } else if(activeFilter==='__unread__') {
+    filtered=allEmails.filter(e=>e.unread);
+  } else {
+    filtered=allEmails.filter(e=>categorize(e)===activeFilter);
+  }
+  renderEmailList(filtered);
+  document.getElementById('inboxCnt').textContent=
+    activeFilter ? `${filtered.length}/${allEmails.length}` : `${allEmails.length} msg`;
+  renderStats(allEmails); // re-render chips with new active state
+}
+
+// ══════════════════════════════════════════════════════════
+// VIEW EMAIL
+// ══════════════════════════════════════════════════════════
+async function viewEmail(id) {
+  document.querySelectorAll('.eitem').forEach(el=>el.classList.remove('active'));
+  const item=document.getElementById('ei-'+id);
+  if(item){item.classList.add('active');item.classList.remove('unread');item.querySelector('.udot')?.remove();}
+  document.getElementById('emailView').innerHTML='<div class="load-row"><div class="spinner"></div></div>';
+  // Reset OCR persist on new email
+  clearPersistOcr();
+
+  try {
+    const md=await api(`${BASE}/messages/${id}?format=full`);
+    const h=Object.fromEntries((md.payload?.headers||[]).map(x=>[x.name,x.value]));
+    const {body,isHtml}=extractBody(md.payload||{});
+    const atts=extractAtts(md.payload||{});
+
+    api(`${BASE}/messages/${id}/modify`,{method:'POST',body:JSON.stringify({removeLabelIds:['UNREAD']})}).catch(()=>{});
+
+    curEmail={id,threadId:md.threadId,messageId:h['Message-ID']||'',
+      from:h.From||'',to:h.To||'',subject:h.Subject||'',date:h.Date||''};
+    curAtts=atts; mergeMode=false; attRenames={}; attSelectedDocTypes={};
+    if(atts.length) { _emailsWithAtts.add(id); updateMiniStats(); }
+
+    const mergeBtn=atts.length>1
+      ?`<button class="btn-merge-toggle" id="btnMergeMode" onclick="toggleMergeMode()" title="Selectează atașamente pentru merge PDF">⊕ Merge PDF</button>`:'';
+    const attChips=atts.map(a=>{
+      const fn=JSON.stringify(a.filename); const mt=JSON.stringify(a.mimeType);
+      return `<div class="att-chip" id="achip-${a.attachmentId}"
+        data-attid="${a.attachmentId}" data-msgid="${id}"
+        data-name="${esc(a.filename)}" data-mime="${esc(a.mimeType)}" data-size="${a.size}"
+        onclick="attChipClick(event,'${id}','${a.attachmentId}',${fn.replace(/"/g,'&quot;')},${mt.replace(/"/g,'&quot;')},${a.size})">
+        <span class="att-icon">📎</span><span
+          class="att-chip-name"
+          contenteditable="true"
+          title="Click pentru redenumire"
+          data-attid="${a.attachmentId}"
+          onclick="event.stopPropagation()"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"
+          onblur="saveAttRename(this,'${a.attachmentId}')"
+        >${esc(a.filename)}</span>
+        <span style="color:var(--text3)">${fmtSize(a.size)}</span>
+      </div>`;
+    }).join('');
+    const attHtml=atts.length?`<div class="att-bar" id="attBar">
+      ${mergeBtn}${attChips}
+      <div class="att-merge-bar hidden" id="attMergeBar">
+        <input type="text" id="mergeFileName" placeholder="document-merged.pdf">
+        <button class="btn-merge-go" id="btnMergeGo" onclick="doMerge()">⊕ Creează PDF</button>
+        <span class="merge-status" id="mergeStatus"></span>
+      </div>
+    </div>`:'';
+
+    let bodyHtml;
+    if(isHtml){
+      // Hide quoted content (blockquote, gmail_quote, reply sections)
+      const wrapped=`<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>*{box-sizing:border-box;}body{font-family:Arial,sans-serif;font-size:16px;line-height:1.5;margin:10px;color:#111;background:#fff;word-break:break-word;}img{max-width:100%;}
+blockquote,blockquote *,.gmail_quote,.gmail_quote *,.yahoo_quoted,.yahoo_quoted *,
+div[class*="quote"],div[class*="Quote"],div[class*="reply"],div[class*="Reply"],
+#divRplyFwdMsg,#OLK_SRC_BODY_SECTION,.moz-cite-prefix~*{display:none!important;}
+</style>
+</head><body>${body}</body></html>`;
+      const blob=URL.createObjectURL(new Blob([wrapped],{type:'text/html'}));
+      bodyHtml=`<iframe class="ev-body-frame" src="${blob}" sandbox="allow-same-origin"></iframe>`;
+    } else {
+      bodyHtml=`<div class="ev-body-txt">${esc(stripQuoted(body))}</div>`;
+    }
+
+    document.getElementById('emailView').innerHTML=`
+      <div class="ev-hdr-block">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">
+          <div class="ev-subject" style="flex:1">${esc(h.Subject||'')}</div>
+          <div style="display:flex;gap:5px;flex-shrink:0">
+            <button onclick="showRegModal()" title="Înregistrare nouă în Registru" style="background:var(--accent);border:none;color:#fff;border-radius:4px;padding:3px 9px;cursor:pointer;font-size:12px;line-height:1.4;white-space:nowrap">📋 Reg.</button>
+            <button onclick="openInscriereDirecta()" title="Înscrie în rând existent din Registru" style="background:#7c3aed;border:none;color:#fff;border-radius:4px;padding:3px 9px;cursor:pointer;font-size:12px;line-height:1.4;white-space:nowrap">✏️ Înscrie</button>
+            <button onclick="trashEmail('${id}')" title="Mută în Coș" style="background:none;border:1px solid var(--border);color:var(--text3);border-radius:4px;padding:3px 9px;cursor:pointer;font-size:13px;line-height:1.4" onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'">🗑</button>
+          </div>
+        </div>
+        <div class="ev-row"><span class="ev-lbl">De la:</span><span class="ev-val">${esc(h.From||'')}</span></div>
+        <div class="ev-row"><span class="ev-lbl">Către:</span><span class="ev-val">${esc(h.To||'')}</span></div>
+        <div class="ev-row"><span class="ev-lbl">Data:</span><span class="ev-val">${esc(h.Date||'')}</span></div>
+      </div>${attHtml}${bodyHtml}`;
+
+    // Save email meta for registration modal
+    curEmailMeta={id, from:h.From||'', to:h.To||'', subject:h.Subject||'',
+      date:h.Date||'', attachments:atts.map(a=>a.filename)};
+    // Persist sender info even after email navigation
+    _lastSenderEmail=extractEmail(h.From||'');
+    _lastSenderName=h.From||'';
+    _lastThreadId=md.threadId||'';
+    _lastMsgId=h['Message-ID']||'';
+    _lastSubject=h.Subject||'';
+    // Extract sender Nume/Prenume
+    const _sp = parseSenderName(h.From||'');
+    _senderPrenume = _sp.prenume;
+    _senderNume    = _sp.nume;
+    document.getElementById('senderNume').value    = _senderNume;
+    document.getElementById('senderPrenume').value = _senderPrenume;
+    document.getElementById('senderNameBar').style.display = '';
+
+    document.getElementById('rTo').value=extractEmail(h.From||'');
+    document.getElementById('rSubj').value=h.Subject?.startsWith('Re:')?h.Subject:'Re: '+(h.Subject||'');
+    document.getElementById('replyBody').value='';
+    document.getElementById('varsRow').innerHTML='';
+    clearAttachedFiles();
+    setStatus('');
+    document.getElementById('replyWrap').classList.remove('hidden');
+    // Load conversation history with this contact
+    const isSent=(md.labelIds||[]).includes('SENT');
+    const contactEmail=extractEmail(isSent?(h.To||''):(h.From||''));
+    if(contactEmail) loadHistory(contactEmail, id);
+  } catch(e) {
+    document.getElementById('emailView').innerHTML=`<div class="load-row" style="color:var(--red)">Eroare: ${esc(e.message)}</div>`;
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// ATTACHMENT SIDEBAR
+// ══════════════════════════════════════════════════════════
+let _curSidebarAttId = '';
+async function openAttSidebar(msgId, attId, filename, mimeType, size) {
+  _curSidebarAttId = attId;
+  const displayName = attRenames[attId] || filename;
+  ocrData=null; curAttB64=null; curAttMime=realMime(mimeType,filename); curAttFilename=displayName;
+
+  // Switch sidebar view — expand to wide by default
+  document.getElementById('sbTmplView').classList.add('hidden');
+  document.getElementById('sbAttView').classList.remove('hidden');
+  document.querySelector('.col-sidebar').classList.add('wide');
+  document.getElementById('btnExpandSb').textContent='⤡';
+
+  document.getElementById('attSidebarName').textContent=filename;
+  document.getElementById('attRename').value=filename;
+  document.getElementById('attPreviewArea').innerHTML='<div class="load-row"><div class="spinner"></div></div>';
+  document.getElementById('ocrActions').classList.add('hidden');
+  document.getElementById('attFwdForm').classList.add('hidden');
+  document.getElementById('fwdStatus').textContent='';
+  document.getElementById('btnOCR').disabled=false;
+  document.getElementById('btnOCR').textContent='✦ OCR';
+
+  const hasKey=!!localStorage.getItem('anthroKey');
+  if(hasKey) {
+    renderOcrChecklist();
+  } else {
+    document.getElementById('ocrSection').innerHTML=`<div class="no-key-warn">⚠ Anthropic API Key lipsă.<br>Intră în <b>⚙ Setări</b> și adaugă cheia pentru OCR Vision.</div>`;
+  }
+
+  try {
+    const data=await api(`${BASE}/messages/${msgId}/attachments/${attId}`);
+    curAttB64=data.data;
+    const b64std=curAttB64.replace(/-/g,'+').replace(/_/g,'/');
+
+    const effMime=curAttMime; // already resolved via realMime
+    if(effMime.startsWith('image/')) {
+      document.getElementById('attPreviewArea').innerHTML=
+        `<img src="data:${effMime};base64,${b64std}" alt="${esc(filename)}">`;
+    } else if(effMime==='application/pdf') {
+      document.getElementById('attPreviewArea').innerHTML=
+        `<iframe src="data:application/pdf;base64,${b64std}"></iframe>`;
+    } else if(effMime==='application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+      // .docx — render with mammoth.js
+      if(typeof mammoth==='undefined') {
+        document.getElementById('attPreviewArea').innerHTML=
+          `<div style="color:var(--yellow);font-size:12px;padding:16px;text-align:center">⏳ Se încarcă mammoth.js...</div>`;
+        await loadScript('https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js');
+      }
+      const arrBuf=Uint8Array.from(atob(b64std),c=>c.charCodeAt(0)).buffer;
+      const result=await mammoth.convertToHtml({arrayBuffer:arrBuf});
+      const div=document.createElement('div');
+      div.className='docx-body';
+      div.innerHTML=result.value||'<em style="color:#999">Document gol sau nesuportat.</em>';
+      document.getElementById('attPreviewArea').innerHTML='';
+      document.getElementById('attPreviewArea').appendChild(div);
+    } else {
+      // unsupported — show info + download + open in new tab
+      document.getElementById('attPreviewArea').innerHTML=`
+        <div style="text-align:center;color:var(--text3);font-size:13px;padding:24px;line-height:2">
+          <div style="font-size:48px;margin-bottom:10px">${fileIcon(effMime)}</div>
+          <div style="color:var(--text2);font-weight:600;font-size:14px;margin-bottom:4px">${esc(filename)}</div>
+          <div style="font-size:12px;margin-bottom:18px;color:var(--text3)">${esc(effMime)} · ${fmtSize(size)}</div>
+          <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+            <button onclick="doDownload()" style="background:var(--surface3);border:1px solid var(--border);color:var(--text2);padding:7px 18px;border-radius:4px;cursor:pointer;font-size:13px;">↓ Descarcă</button>
+            <button onclick="openInTab()" style="background:var(--accent);border:none;color:#fff;padding:7px 18px;border-radius:4px;cursor:pointer;font-size:13px;">↗ Deschide în tab</button>
+          </div>
+          <div style="font-size:11px;margin-top:14px;color:var(--text3)">Preview indisponibil pentru .doc<br>Deschide în tab → Windows îl va prelua cu Word/Edge</div>
+        </div>`;
+    }
+  } catch(e) {
+    document.getElementById('attPreviewArea').innerHTML=`<div style="color:var(--red);font-size:12px;padding:16px">Eroare: ${esc(e.message)}</div>`;
+  }
+}
+
+function closeAttSidebar() {
+  document.getElementById('sbAttView').classList.add('hidden');
+  document.getElementById('sbTmplView').classList.remove('hidden');
+  document.querySelector('.col-sidebar').classList.remove('wide');
+  document.getElementById('btnExpandSb').textContent='⤢';
+  curAttB64=null; curAttMime=null;
+  // ocrData intentionally kept — persists in ocrPersistPanel
+}
+
+// ── Attachment chip click: normal mode opens sidebar, merge mode toggles selection
+function saveAttRename(span, attId) {
+  const newName = span.textContent.trim();
+  if (!newName) { span.textContent = attRenames[attId] || span.dataset.orig || ''; return; }
+  attRenames[attId] = newName;
+  // Sync sidebar if this attachment is currently open
+  if (curAttFilename && document.getElementById('attRename')) {
+    const chip = document.getElementById('achip-' + attId);
+    if (chip && document.getElementById('sbAttView') && !document.getElementById('sbAttView').classList.contains('hidden')) {
+      document.getElementById('attRename').value = newName;
+      document.getElementById('attSidebarName').textContent = newName;
+      curAttFilename = newName;
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// ATTACHMENT TYPE PICKER
+// ══════════════════════════════════════════════════════════
+function buildAttName(doctype, filename) {
+  const today = new Date();
+  const dd = String(today.getDate()).padStart(2,'0');
+  const mm = String(today.getMonth()+1).padStart(2,'0');
+  const yyyy = today.getFullYear();
+  const nume    = (document.getElementById('senderNume')?.value.trim()    || '').replace(/\s+/g,'_');
+  const prenume = (document.getElementById('senderPrenume')?.value.trim() || '').replace(/\s+/g,'_');
+  const ext = filename.includes('.') ? '.' + filename.split('.').pop() : '';
+  const safe = doctype.replace(/[\\/:*?"<>|]/g,'-');
+  const parts = [`${dd}.${mm}.${yyyy}`];
+  if(nume)    parts.push(nume);
+  if(prenume) parts.push(prenume);
+  parts.push(safe);
+  return parts.join('_') + ext;
+}
+
+function _buildPickerItems(q) {
+  const list = document.getElementById('attTypePickerList');
+  list.innerHTML = '';
+  const opts = [];
+  if(_docOptionsCache) {
+    opts.push({cat:'Opțiuni Registru', items:_docOptionsCache});
+  } else {
+    for(const [cat,items] of Object.entries(DOC_OPTIONS)) opts.push({cat,items});
+  }
+  const qlo = (q||'').toLowerCase();
+  let found = 0;
+  opts.forEach(({cat,items}) => {
+    const filtered = qlo ? items.filter(x=>x.toLowerCase().includes(qlo)) : items;
+    if(!filtered.length) return;
+    const catDiv = document.createElement('div');
+    catDiv.className='atp-cat'; catDiv.textContent=cat;
+    list.appendChild(catDiv);
+    filtered.forEach(opt => {
+      const d = document.createElement('div');
+      d.className='atp-opt' + (attSelectedDocTypes[_curPickerAttId]===opt ? ' selected' : '');
+      d.textContent = opt;
+      d.onclick = () => selectAttDocType(_curPickerAttId, opt, _curPickerFilename, _curPickerMsgId, _curPickerMime, _curPickerSize);
+      list.appendChild(d);
+      found++;
+    });
+  });
+  if(!found) {
+    const d=document.createElement('div');
+    d.style.cssText='font-size:11px;color:var(--text3);padding:8px;text-align:center';
+    d.textContent='Nicio opțiune găsită';
+    list.appendChild(d);
+  }
+}
+
+function showAttTypePicker(evt, msgId, attId, filename, mimeType, size) {
+  // Ensure doc options are loaded
+  if(!_docOptionsCache) loadDocOptions().then(()=>_buildPickerItems(''));
+
+  _curPickerAttId=attId; _curPickerMsgId=msgId;
+  _curPickerFilename=filename; _curPickerMime=mimeType; _curPickerSize=size;
+
+  const picker = document.getElementById('attTypePicker');
+  picker.style.display = 'flex';
+
+  // Position near the chip
+  const rect = (evt.currentTarget||evt.target).closest('.att-chip')?.getBoundingClientRect();
+  if(rect) {
+    let top = rect.bottom + 6;
+    let left = rect.left;
+    if(top + 340 > window.innerHeight) top = rect.top - 340 - 6;
+    if(left + 300 > window.innerWidth) left = window.innerWidth - 308;
+    picker.style.top = top + 'px';
+    picker.style.left = left + 'px';
+  }
+
+  document.getElementById('attTypeSearch').value = '';
+  _buildPickerItems('');
+  document.getElementById('attTypeSearch').focus();
+
+  // "Open sidebar" button
+  document.getElementById('attTypeOpenSidebar').onclick = () => {
+    closeAttTypePicker();
+    openAttSidebar(msgId, attId, filename, mimeType, size);
+  };
+}
+
+function filterAttTypePicker(q) { _buildPickerItems(q); }
+
+function selectAttDocType(attId, doctype, filename, msgId, mimeType, size) {
+  attSelectedDocTypes[attId] = doctype;
+  const newName = buildAttName(doctype, filename);
+  attRenames[attId] = newName;
+
+  // Update chip label
+  const chip = document.getElementById('achip-' + attId);
+  if(chip) {
+    const span = chip.querySelector('.att-chip-name');
+    if(span) span.textContent = newName;
+    chip.style.borderColor = 'var(--accent)';
+    chip.style.background = 'rgba(37,99,235,.08)';
+  }
+
+  closeAttTypePicker();
+
+  // If reg modal is already open, tick the matching doc option
+  const regModal = document.getElementById('regModal');
+  if(regModal && !regModal.classList.contains('hidden')) {
+    const cb = document.querySelector(`#regDocOpts input[data-docopt="${CSS.escape(doctype)}"]`);
+    if(cb && !cb.checked) { cb.checked=true; syncDocOptInput(); }
+  }
+}
+
+function closeAttTypePicker() {
+  document.getElementById('attTypePicker').style.display='none';
+}
+
+// Close picker on outside click
+document.addEventListener('click', e => {
+  const picker = document.getElementById('attTypePicker');
+  if(picker && picker.style.display!=='none' && !picker.contains(e.target) && !e.target.closest('.att-chip')) {
+    closeAttTypePicker();
+  }
+});
+
+function attChipClick(evt, msgId, attId, filename, mimeType, size) {
+  if(mergeMode) {
+    const chip=document.getElementById('achip-'+attId);
+    chip.classList.toggle('merge-sel');
+    const sel=document.querySelectorAll('.att-chip.merge-sel').length;
+    document.getElementById('btnMergeGo').textContent=sel>=2?`⊕ Merge ${sel} fișiere`:'⊕ Creează PDF';
+    document.getElementById('mergeStatus').textContent='';
+  } else {
+    evt.stopPropagation();
+    showAttTypePicker(evt, msgId, attId, filename, mimeType, size);
+  }
+}
+
+function toggleMergeMode() {
+  mergeMode=!mergeMode;
+  const btn=document.getElementById('btnMergeMode');
+  const bar=document.getElementById('attMergeBar');
+  if(btn) btn.classList.toggle('on', mergeMode);
+  if(bar) bar.classList.toggle('hidden', !mergeMode);
+  // Deselect all chips when turning off
+  if(!mergeMode) {
+    document.querySelectorAll('.att-chip.merge-sel').forEach(c=>c.classList.remove('merge-sel'));
+    document.getElementById('mergeStatus').textContent='';
+  }
+  if(mergeMode && !document.getElementById('mergeFileName').value) {
+    document.getElementById('mergeFileName').value='documente-merged.pdf';
+  }
+}
+
+async function doMerge() {
+  const sel=[...document.querySelectorAll('.att-chip.merge-sel')];
+  if(sel.length<2){
+    document.getElementById('mergeStatus').textContent='⚠ Selectează 2+';
+    return;
+  }
+  if(typeof PDFLib==='undefined'){
+    document.getElementById('mergeStatus').textContent='⚠ pdf-lib nu s-a încărcat';
+    return;
+  }
+  const btn=document.getElementById('btnMergeGo');
+  btn.disabled=true;
+  const status=document.getElementById('mergeStatus');
+  status.textContent='Se încarcă...'; status.style.color='var(--text3)';
+
+  try {
+    const {PDFDocument,rgb}=PDFLib;
+    const merged=await PDFDocument.create();
+
+    for(let i=0;i<sel.length;i++) {
+      const chip=sel[i];
+      const attId=chip.dataset.attid;
+      const msgId=chip.dataset.msgid;
+      const name=chip.dataset.name;
+      const mime=realMime(chip.dataset.mime,name);
+      status.textContent=`${i+1}/${sel.length}: ${name}...`;
+
+      const data=await api(`${BASE}/messages/${msgId}/attachments/${attId}`);
+      const b64std=data.data.replace(/-/g,'+').replace(/_/g,'/');
+      const bytes=Uint8Array.from(atob(b64std),c=>c.charCodeAt(0));
+
+      if(mime==='application/pdf') {
+        const pdf=await PDFDocument.load(bytes,{ignoreEncryption:true});
+        const pages=await merged.copyPages(pdf,pdf.getPageIndices());
+        pages.forEach(p=>merged.addPage(p));
+      } else if(mime.startsWith('image/')) {
+        // Convert any image format to PNG via Canvas, then embed
+        const pngBytes=await imageToCanvas(b64std,mime);
+        const img=await merged.embedPng(pngBytes);
+        const {width,height}=img.scale(1);
+        // Fit to A4 if very large
+        const maxW=595,maxH=842;
+        const scale=Math.min(1,maxW/width,maxH/height);
+        const pw=width*scale,ph=height*scale;
+        const page=merged.addPage([pw,ph]);
+        page.drawImage(img,{x:0,y:0,width:pw,height:ph});
+      } else {
+        // unsupported type — add a placeholder page (ASCII only, pdf-lib WinAnsi limitation)
+        const page=merged.addPage([595,842]);
+        const safeName=name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x00-\x7F]/g,'?');
+        page.drawText(`Fisier nesuportat: ${safeName}  (${mime})`,{x:50,y:780,size:11,color:rgb(0.5,0.5,0.5)});
+      }
+    }
+
+    const pdfBytes=await merged.save();
+    let outName=document.getElementById('mergeFileName').value.trim()||'merged.pdf';
+    if(!outName.toLowerCase().endsWith('.pdf')) outName+='.pdf';
+    const blob=new Blob([pdfBytes],{type:'application/pdf'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download=outName; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+
+    status.textContent='✓ PDF creat!'; status.style.color='var(--green)';
+    // Preview merged PDF in sidebar via blob URL (data: URIs blocked by Chrome for PDFs)
+    const b64=bytesToB64(pdfBytes);
+    curAttB64=b64.replace(/\+/g,'-').replace(/\//g,'_');
+    curAttMime='application/pdf'; curAttFilename=outName;
+    const pdfBlob=new Blob([pdfBytes],{type:'application/pdf'});
+    const pdfUrl=URL.createObjectURL(pdfBlob);
+    document.querySelector('.col-sidebar').classList.add('wide');
+    document.getElementById('btnExpandSb').textContent='⤡';
+    document.getElementById('sbTmplView').classList.add('hidden');
+    document.getElementById('sbAttView').classList.remove('hidden');
+    document.getElementById('attSidebarName').textContent=outName;
+    document.getElementById('attRename').value=outName;
+    document.getElementById('attPreviewArea').innerHTML=`<iframe src="${pdfUrl}"></iframe>`;
+    document.getElementById('ocrSection').innerHTML='<div class="ocr-hint">PDF merged. Poți folosi OCR sau descărca/trimite.</div>';
+    document.getElementById('ocrActions').classList.add('hidden');
+    document.getElementById('attFwdForm').classList.add('hidden');
+    setTimeout(()=>URL.revokeObjectURL(pdfUrl), 60000);
+
+  } catch(e) {
+    status.textContent='✕ '+e.message.slice(0,50);
+    status.style.color='var(--red)';
+  } finally {
+    btn.disabled=false;
+  }
+}
+
+function attToBlob() {
+  const b64std=curAttB64.replace(/-/g,'+').replace(/_/g,'/');
+  const byteStr=atob(b64std);
+  const arr=new Uint8Array(byteStr.length);
+  for(let i=0;i<byteStr.length;i++) arr[i]=byteStr.charCodeAt(i);
+  return new Blob([arr],{type:curAttMime||'application/octet-stream'});
+}
+function doDownload() {
+  if(!curAttB64) return;
+  // If a doc type was assigned via picker, rebuild the name with current sender name (may have changed)
+  if(_curSidebarAttId && attSelectedDocTypes[_curSidebarAttId]) {
+    const newName = buildAttName(attSelectedDocTypes[_curSidebarAttId], curAttFilename);
+    document.getElementById('attRename').value = newName;
+    attRenames[_curSidebarAttId] = newName;
+  }
+  const name=document.getElementById('attRename').value.trim()||curAttFilename;
+  const url=URL.createObjectURL(attToBlob());
+  const a=document.createElement('a'); a.href=url; a.download=name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function openInTab() {
+  if(!curAttB64) return;
+  const url=URL.createObjectURL(attToBlob());
+  window.open(url,'_blank');
+  setTimeout(()=>URL.revokeObjectURL(url),30000);
+}
+
+function toggleFwdForm() {
+  const form=document.getElementById('attFwdForm');
+  const hidden=form.classList.toggle('hidden');
+  if(!hidden) {
+    // Pre-fill subject
+    const name=document.getElementById('attRename').value.trim()||curAttFilename;
+    document.getElementById('fwdSubj').value='Fwd: '+name;
+    document.getElementById('fwdTo').focus();
+    document.getElementById('fwdStatus').textContent='';
+  }
+}
+
+async function doForwardAtt() {
+  if(!curAttB64) return;
+  const to=document.getElementById('fwdTo').value.trim();
+  const subj=document.getElementById('fwdSubj').value.trim();
+  if(!to){document.getElementById('fwdStatus').textContent='⚠ Lipsă destinatar';return;}
+  const name=document.getElementById('attRename').value.trim()||curAttFilename;
+  const msg=document.getElementById('fwdMsg').value.trim();
+  const body=msg||(curEmail?`Vă transmit atașamentul "${name}" din emailul: ${curEmail.subject||''}`:`Vă transmit atașamentul "${name}".`);
+
+  // Get clean base64 (standard, not base64url)
+  const data=curAttB64.replace(/-/g,'+').replace(/_/g,'/');
+  // Pad if needed
+  const padded=data+('='.repeat((4-data.length%4)%4));
+
+  const status=document.getElementById('fwdStatus');
+  status.textContent='Se trimite...'; status.style.color='var(--text3)';
+
+  try {
+    const raw=buildMime({
+      to, subject:subj||'Fwd: '+name, body,
+      files:[{name, type:curAttMime||'application/octet-stream', data:padded}]
+    });
+    await api(`${BASE}/messages/send`,{method:'POST',body:JSON.stringify({raw})});
+    status.textContent='✓ Trimis!'; status.style.color='var(--green)';
+    setTimeout(()=>{status.textContent='';},3000);
+  } catch(e) {
+    status.textContent='✕ '+e.message.slice(0,40);
+    status.style.color='var(--red)';
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// VISION OCR
+// ══════════════════════════════════════════════════════════
+async function runOCR() {
+  const apiKey=localStorage.getItem('anthroKey');
+  if(!apiKey){alert('Lipsă Anthropic API Key. Intră în Setări (⚙) și adaugă cheia.');return;}
+  if(!curAttB64){alert('Atașamentul nu a fost încărcat.');return;}
+
+  const btn=document.getElementById('btnOCR');
+  btn.disabled=true; btn.textContent='⏳...';
+  document.getElementById('ocrSection').innerHTML='<div class="ocr-status loading"><div class="spinner purple"></div><br>Vision AI procesează...</div>';
+
+  const isImage=curAttMime.startsWith('image/');
+  const isPDF=curAttMime==='application/pdf';
+  // Normalize base64url → base64 + padding
+  const b64std=(curAttB64.replace(/-/g,'+').replace(/_/g,'/'))+
+    '='.repeat((4-curAttB64.length%4)%4);
+
+  if(!isImage && !isPDF){
+    document.getElementById('ocrSection').innerHTML='<div class="ocr-status err">Tip nesuportat (doar imagini și PDF).</div>';
+    btn.disabled=false; btn.textContent='✦ OCR'; return;
+  }
+
+  const contentBlock = isImage
+    ? {type:'image',source:{type:'base64',media_type:curAttMime,data:b64std}}
+    : {type:'document',source:{type:'base64',media_type:'application/pdf',data:b64std}};
+
+  const selFields=getSelectedOcrFields();
+  const fieldDescriptions={
+    CNP:'CNP (cod numeric personal, 13 cifre)',
+    NUME:'NUME (doar numele de familie, majuscule)',
+    PRENUME:'PRENUME (doar prenumele, majuscule)',
+    SECTOR:'SECTOR (numărul sectorului 1-6 din adresa de domiciliu)',
+    adresa:'adresa (adresa completă de domiciliu)',
+    titular_CI:'titular_CI (nume complet de pe CI)',
+    seria_CI:'seria_CI și numar_CI',
+    IBAN:'IBAN (format RO...)',
+    titular_cont:'titular_cont (numele titularului de cont)',
+    banca:'banca (denumirea băncii)',
+    data_deces:'data_deces (din certificat de deces)',
+    nr_certificat_deces:'nr_certificat_deces',
+    data_certificat_deces:'data_certificat_deces',
+    grad_handicap:'grad_handicap (Grav/Accentuat/Mediu/Ușor)',
+    tip_handicap:'tip_handicap',
+    data_expirarii:'data_expirarii (certificat handicap)',
+    numar_certificat:'numar_certificat (certificat handicap)',
+  };
+  const wantedDesc=selFields.map(k=>fieldDescriptions[k]||k).join(', ');
+  const prompt=`Ești asistent pentru DGASMC București. Analizează documentul și extrage DOAR câmpurile solicitate.
+
+Câmpuri de extras: ${wantedDesc}
+
+Răspunde DOAR cu un obiect JSON valid care conține NUMAI câmpurile găsite din lista de mai sus. Omite câmpurile lipsă sau neidentificabile. Folosește exact cheile specificate (snake_case).`;
+
+  const ocrUrl='/api/ocr?k='+encodeURIComponent(apiKey.trim())+(isPDF?'&beta=pdfs-2024-09-25':'');
+
+  try {
+    const resp=await fetch(ocrUrl,{
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({model:'claude-opus-4-6',max_tokens:1024,
+        messages:[{role:'user',content:[contentBlock,{type:'text',text:prompt}]}]})
+    });
+    const result=await resp.json();
+    if(result.error) throw new Error(result.error.message||JSON.stringify(result.error));
+
+    const text=result.content?.[0]?.text||'{}';
+    const jsonMatch=text.match(/\{[\s\S]*\}/);
+    if(!jsonMatch) throw new Error('Răspuns neașteptat');
+    ocrData=JSON.parse(jsonMatch[0]);
+    renderOCRFields(ocrData);
+    document.getElementById('ocrActions').classList.remove('hidden');
+  } catch(e) {
+    document.getElementById('ocrSection').innerHTML=`<div class="ocr-status err">✕ ${esc(e.message)}</div>`;
+  } finally {
+    btn.disabled=false; btn.textContent='✦ OCR';
+  }
+}
+
+const OCR_LABEL_MAP={
+  NUME:'Nume',PRENUME:'Prenume',CNP:'CNP',SECTOR:'Sector',
+  grad_handicap:'Grad handicap',
+  tip_handicap:'Tip handicap',data_emiterii:'Data emiterii',data_expirarii:'Data expirării',
+  numar_certificat:'Nr. certificat',institutie_emitenta:'Instituție emitentă',
+  data_nasterii:'Data nașterii',adresa:'Adresă',seria_CI:'Seria CI',numar_CI:'Nr. CI',
+  IBAN:'IBAN',banca:'Bancă',titular_cont:'Titular cont',tip_solicitare:'Tip solicitare',
+  data_deces:'Data deces',nr_certificat_deces:'Nr. certif. deces',data_certificat_deces:'Data certif. deces',
+  titular_CI:'Titular CI'
+};
+
+function renderOCRFields(data) {
+  // Save persistent copy
+  persistOcrData={...data};
+  // Render in attachment sidebar
+  const html=Object.entries(data).map(([k,v])=>`
+    <div class="ocr-field">
+      <label>${OCR_LABEL_MAP[k]||k}</label>
+      <div class="ocr-val" contenteditable="true" data-key="${esc(k)}">${esc(String(v))}</div>
+    </div>`).join('');
+  document.getElementById('ocrSection').innerHTML=html||'<div class="ocr-hint">Niciun câmp extras.</div>';
+  // Also update persistent panel in template sidebar
+  updateOcrPersistPanel();
+}
+
+function updateOcrPersistPanel() {
+  if(!persistOcrData||!Object.keys(persistOcrData).length) return;
+  const fields=document.getElementById('ocrPersistFields');
+  fields.innerHTML=Object.entries(persistOcrData).map(([k,v])=>`
+    <div class="ocr-persist-row">
+      <label>${OCR_LABEL_MAP[k]||k}</label>
+      <span>${esc(String(v))}</span>
+    </div>`).join('');
+  document.getElementById('ocrPersistPanel').classList.remove('hidden');
+}
+
+function clearPersistOcr() {
+  persistOcrData=null; ocrData=null;
+  document.getElementById('ocrPersistPanel').classList.add('hidden');
+  document.getElementById('ocrPersistFields').innerHTML='';
+}
+
+function insertOCRToReply() {
+  // Read from live sidebar if open, else from persistOcrData
+  let fields={};
+  const liveFields=document.querySelectorAll('#ocrSection .ocr-val[data-key]');
+  if(liveFields.length) {
+    liveFields.forEach(el=>{ fields[el.dataset.key]=el.textContent.trim(); });
+  } else if(persistOcrData) {
+    fields=persistOcrData;
+  }
+  if(!Object.keys(fields).length) return;
+  const lines=Object.entries(fields).map(([k,v])=>`${OCR_LABEL_MAP[k]||k}: ${v}`).join('\n');
+  const ta=document.getElementById('replyBody');
+  const cursor=ta.selectionStart||0;
+  ta.value=ta.value.slice(0,cursor)+'\n--- Date extrase OCR ---\n'+lines+'\n'+ta.value.slice(cursor);
+  if(document.getElementById('sbAttView').classList.contains('hidden')===false) closeAttSidebar();
+  document.getElementById('replyWrap').classList.remove('hidden');
+}
+
+// ══════════════════════════════════════════════════════════
+// TEMPLATES
+// ══════════════════════════════════════════════════════════
+function loadCustomTemplates() {
+  try {
+    const saved=JSON.parse(localStorage.getItem('customTemplates')||'[]');
+    TEMPLATES=[...TEMPLATES_BUILTIN,...saved];
+    const cnt=saved.length;
+    document.getElementById('customTmplCnt').textContent=cnt?`+${cnt} custom`:'';
+  } catch {}
+}
+
+function renderTemplates(tmpl) {
+  const cats=[...new Set(tmpl.map(t=>t.cat))];
+  document.getElementById('tmplList').innerHTML=cats.map(c=>`
+    <div class="tmpl-cat">${c}</div>
+    ${tmpl.filter(t=>t.cat===c).map(t=>`
+      <div class="tcard" onclick='selectTmpl(${JSON.stringify(t).replace(/'/g,"&#39;")})' id="tc-${t.id}">
+        <div class="tc-name"><span class="tc-dot" style="background:${t.color||'#64748b'}"></span>${esc(t.name)}</div>
+        <div class="tc-desc">${esc(t.desc||'')}</div>
+      </div>`).join('')}`).join('');
+}
+
+function filterTmpl(){
+  const q=document.getElementById('tmplSearch').value.toLowerCase();
+  renderTemplates(q?TEMPLATES.filter(t=>
+    t.name.toLowerCase().includes(q)||((t.desc||'').toLowerCase().includes(q))||t.cat.toLowerCase().includes(q)
+  ):TEMPLATES);
+}
+
+function selectTmpl(t) {
+  selectedTmpl=t;
+  document.querySelectorAll('.tcard').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tc-'+t.id)?.classList.add('active');
+
+  // Show preview panel
+  document.getElementById('tmplPrevName').textContent=t.name;
+  const op=document.getElementById('opInput').value||'{OP}';
+  document.getElementById('tmplPrevBody').textContent=HEADER+t.body+FOOTER.replace('{OP}',op);
+  document.getElementById('tmplPreviewPanel').classList.remove('hidden');
+  document.getElementById('saveTmplForm').classList.add('hidden');
+}
+
+function closeTmplPreview() {
+  document.getElementById('tmplPreviewPanel').classList.add('hidden');
+  document.querySelectorAll('.tcard').forEach(el=>el.classList.remove('active'));
+  selectedTmpl=null;
+}
+
+function applySelectedTmpl() {
+  if(!selectedTmpl) return;
+  applyTmpl(selectedTmpl);
+}
+
+function applyTmpl(t) {
+  selectedTmpl=t;
+  document.querySelectorAll('.tcard').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tc-'+t.id)?.classList.add('active');
+  const op=document.getElementById('opInput').value||'{OP}';
+  const full=HEADER+t.body+FOOTER.replace('{OP}',op);
+  const vars=[...new Set([...full.matchAll(/\{([^}]+)\}/g)].map(m=>m[1]).filter(v=>v!=='OP'))];
+  const row=document.getElementById('varsRow');
+  row.innerHTML=''; row.dataset.tmpl=full;
+  vars.forEach(v=>{
+    const chip=document.createElement('div'); chip.className='vchip';
+    chip.innerHTML=`<label>${v}:</label><input type="text" data-v="${v}" placeholder="${v}" oninput="rebuildBody()">`;
+    row.appendChild(chip);
+  });
+  rebuildBody();
+  document.getElementById('replyWrap').classList.remove('hidden');
+  document.getElementById('replyBody').focus();
+}
+
+function rebuildBody(){
+  const row=document.getElementById('varsRow');
+  const op=document.getElementById('opInput').value||'{OP}';
+  let body=(row.dataset.tmpl||'').replace(/\{OP\}/g,op);
+  row.querySelectorAll('input[data-v]').forEach(inp=>{
+    const val=inp.value.trim()||'{'+inp.dataset.v+'}';
+    body=body.replace(new RegExp('\\{'+inp.dataset.v+'\\}','g'),val);
+  });
+  document.getElementById('replyBody').value=body;
+}
+
+// ══════════════════════════════════════════════════════════
+// SAVE TEMPLATE FROM REPLY
+// ══════════════════════════════════════════════════════════
+function showSaveTmplForm() {
+  const body=document.getElementById('replyBody').value.trim();
+  if(!body){setStatus('⚠ Scrie ceva în reply pentru a salva ca template',true);return;}
+  // Make sure we're in template view
+  document.getElementById('sbAttView').classList.add('hidden');
+  document.getElementById('sbTmplView').classList.remove('hidden');
+  document.getElementById('tmplPreviewPanel').classList.add('hidden');
+  document.getElementById('saveTmplForm').classList.remove('hidden');
+  document.getElementById('stName').value='';
+  document.getElementById('stCat').value='';
+  document.getElementById('stName').focus();
+}
+
+function hideSaveTmplForm() {
+  document.getElementById('saveTmplForm').classList.add('hidden');
+}
+
+// ── Compose / import template ──
+function showComposeTmpl(prefillBody='') {
+  document.getElementById('tmplPreviewPanel').classList.add('hidden');
+  document.getElementById('saveTmplForm').classList.add('hidden');
+  document.getElementById('composeTmplForm').classList.remove('hidden');
+  document.getElementById('ctName').value='';
+  document.getElementById('ctCat').value='';
+  document.getElementById('ctBody').value=prefillBody;
+  document.getElementById('ctName').focus();
+}
+
+function hideComposeTmpl() {
+  document.getElementById('composeTmplForm').classList.add('hidden');
+}
+
+async function importDocxTemplate() {
+  const inp=document.getElementById('tmplDocxInput');
+  if(!inp.files.length) return;
+  const file=inp.files[0];
+  inp.value='';
+  try {
+    if(typeof mammoth==='undefined')
+      await loadScript('https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js');
+    const buf=await file.arrayBuffer();
+    const result=await mammoth.extractRawText({arrayBuffer:buf});
+    showComposeTmpl(result.value.trim());
+    document.getElementById('ctName').value=file.name.replace(/\.docx$/i,'');
+  } catch(e) { alert('Eroare import .docx: '+e.message); }
+}
+
+function doComposeTmpl() {
+  const name=document.getElementById('ctName').value.trim();
+  const cat=document.getElementById('ctCat').value.trim()||'Custom';
+  const body=document.getElementById('ctBody').value.trim();
+  if(!name){alert('Introduceți un nume pentru template.');return;}
+  if(!body){alert('Introduceți textul template-ului.');return;}
+  const newT={id:'C'+Date.now(),name,cat,color:'#64748b',desc:cat,body};
+  try {
+    const saved=JSON.parse(localStorage.getItem('customTemplates')||'[]');
+    saved.push(newT);
+    localStorage.setItem('customTemplates',JSON.stringify(saved));
+    TEMPLATES=[...TEMPLATES_BUILTIN,...saved];
+    renderTemplates(TEMPLATES);
+    document.getElementById('customTmplCnt').textContent=`+${saved.length} custom`;
+    hideComposeTmpl();
+    setStatus('✓ Template adăugat');
+  } catch(e) { alert('Eroare la salvare: '+e.message); }
+}
+
+function doSaveTemplate() {
+  const name=document.getElementById('stName').value.trim();
+  const cat=document.getElementById('stCat').value.trim()||'Custom';
+  const body=document.getElementById('replyBody').value.trim();
+  if(!name){alert('Introduceți un nume pentru template.');return;}
+  if(!body){alert('Reply-ul este gol.');return;}
+
+  // Strip footer if present to save clean body
+  const footerStart='\n\nCu stimă,\n';
+  const bodyClean=body.includes(footerStart)?body.slice(0,body.indexOf(footerStart)):body;
+
+  const newT={
+    id:'C'+Date.now(), name, cat, color:'#64748b',
+    desc:'Template salvat din reply', body:bodyClean
+  };
+
+  try {
+    const saved=JSON.parse(localStorage.getItem('customTemplates')||'[]');
+    saved.push(newT);
+    localStorage.setItem('customTemplates',JSON.stringify(saved));
+    TEMPLATES=[...TEMPLATES_BUILTIN,...saved];
+    renderTemplates(TEMPLATES);
+    document.getElementById('customTmplCnt').textContent=`+${saved.length} custom`;
+    hideSaveTmplForm();
+    setStatus('✓ Template salvat');
+  } catch(e) {
+    alert('Eroare la salvare: '+e.message);
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// FILE ATTACHMENTS (outgoing)
+// ══════════════════════════════════════════════════════════
+function onFilesSelected(fileList) {
+  Array.from(fileList).forEach(file=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const dataUrl=e.target.result;
+      const base64=dataUrl.split(',')[1];
+      attachedFiles.push({name:file.name,type:file.type,data:base64});
+      renderFileChips();
+    };
+    reader.readAsDataURL(file);
+  });
+  document.getElementById('fileInput').value='';
+}
+
+function removeFile(idx) {
+  attachedFiles.splice(idx,1);
+  renderFileChips();
+}
+
+function renderFileChips() {
+  const row=document.getElementById('fileAttachRow');
+  row.innerHTML=attachedFiles.map((f,i)=>`
+    <div class="fchip" onclick="previewOutgoingFile(${i})" style="cursor:pointer" title="Click pentru preview">
+      📎 ${esc(f.name)}
+      <button onclick="event.stopPropagation();removeFile(${i})" title="Elimină">✕</button>
+    </div>`).join('');
+}
+
+function previewOutgoingFile(idx) {
+  const f=attachedFiles[idx];
+  if(!f) return;
+  const mime=realMime(f.type,f.name);
+  // base64 standard (not base64url) — attachedFiles stores standard b64 from FileReader
+  const b64std=f.data; // already standard base64 from readAsDataURL
+
+  // Reuse sidebar preview — set state as if it were an incoming attachment
+  ocrData=null;
+  curAttB64=b64std.replace(/\+/g,'-').replace(/\//g,'_'); // store as base64url for OCR
+  curAttMime=mime; curAttFilename=f.name;
+
+  document.querySelector('.col-sidebar').classList.add('wide');
+  document.getElementById('btnExpandSb').textContent='⤡';
+  document.getElementById('sbTmplView').classList.add('hidden');
+  document.getElementById('sbAttView').classList.remove('hidden');
+  document.getElementById('attSidebarName').textContent=f.name;
+  document.getElementById('attRename').value=f.name;
+  document.getElementById('attFwdForm').classList.add('hidden');
+  document.getElementById('ocrActions').classList.add('hidden');
+  document.getElementById('btnOCR').disabled=false;
+  document.getElementById('btnOCR').textContent='✦ OCR';
+
+  const hasKey=!!localStorage.getItem('anthroKey');
+  document.getElementById('ocrSection').innerHTML= hasKey
+    ? '<p class="ocr-hint">Apasă <b>✦ OCR</b> pentru extragere câmpuri.</p>'
+    : '<div class="no-key-warn">⚠ Anthropic API Key lipsă pentru OCR.</div>';
+
+  // Render preview
+  const area=document.getElementById('attPreviewArea');
+  if(mime.startsWith('image/')) {
+    area.innerHTML=`<img src="data:${mime};base64,${b64std}" alt="${esc(f.name)}">`;
+  } else if(mime==='application/pdf') {
+    const blob=new Blob([Uint8Array.from(atob(b64std),c=>c.charCodeAt(0))],{type:'application/pdf'});
+    const url=URL.createObjectURL(blob);
+    area.innerHTML=`<iframe src="${url}"></iframe>`;
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+  } else if(mime==='application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+    area.innerHTML='<div style="color:var(--text3);font-size:12px;padding:16px">Se randează .docx...</div>';
+    (async()=>{
+      if(typeof mammoth==='undefined') await loadScript('https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js');
+      const bytes=Uint8Array.from(atob(b64std),c=>c.charCodeAt(0)).buffer;
+      const result=await mammoth.convertToHtml({arrayBuffer:bytes});
+      const div=document.createElement('div'); div.className='docx-body';
+      div.innerHTML=result.value||'<em style="color:#999">Document gol.</em>';
+      area.innerHTML=''; area.appendChild(div);
+    })().catch(e=>{ area.innerHTML=`<div style="color:var(--red);padding:16px;font-size:12px">✕ ${esc(e.message)}</div>`; });
+  } else {
+    area.innerHTML=`<div style="text-align:center;color:var(--text3);font-size:12px;padding:20px">
+      <div style="font-size:36px;margin-bottom:10px">${fileIcon(mime)}</div>
+      <div style="color:var(--text2);font-weight:500">${esc(f.name)}</div>
+      <div style="font-size:11px;margin-top:4px">${esc(mime)}</div>
+    </div>`;
+  }
+}
+
+function clearAttachedFiles() {
+  attachedFiles=[];
+  document.getElementById('fileAttachRow').innerHTML='';
+}
+
+// ══════════════════════════════════════════════════════════
+// SEND / DRAFT
+// ══════════════════════════════════════════════════════════
+async function doSend(){
+  if(!_composeMode && !curEmail) return;
+  const to=document.getElementById('rTo').value.trim();
+  const subject=document.getElementById('rSubj').value.trim();
+  const body=document.getElementById('replyBody').value.trim();
+  if(!to){setStatus('⚠ Câmpul Către este gol',true);return;}
+  if(!body){setStatus('⚠ Corp gol',true);return;}
+  setStatus('Se trimite...');
+  try {
+    const payload={raw:buildMime({to,subject,body,
+      inReplyTo:_composeMode?null:curEmail?.messageId,
+      files:attachedFiles})};
+    if(!_composeMode && curEmail?.threadId) payload.threadId=curEmail.threadId;
+    await api(`${BASE}/messages/send`,{method:'POST',body:JSON.stringify(payload)});
+    setStatus('✓ Trimis!');
+    setTimeout(clearReply,2500);
+  } catch(e){setStatus('✕ '+e.message,true);}
+}
+
+async function doDraft(){
+  if(!_composeMode && !curEmail) return;
+  const to=document.getElementById('rTo').value.trim();
+  const subject=document.getElementById('rSubj').value.trim();
+  const body=document.getElementById('replyBody').value.trim();
+  if(!body){setStatus('⚠ Corp gol',true);return;}
+  setStatus('Se salvează...');
+  try {
+    const msg={raw:buildMime({to,subject,body,files:attachedFiles})};
+    if(!_composeMode && curEmail?.threadId) msg.threadId=curEmail.threadId;
+    await api(`${BASE}/drafts`,{method:'POST',body:JSON.stringify({message:msg})});
+    setStatus('✓ Draft salvat');
+  } catch(e){setStatus('✕ '+e.message,true);}
+}
+
+async function trashEmail(id) {
+  if(!confirm('Muți emailul în Coș?')) return;
+  try {
+    await api(`${BASE}/messages/${id}/trash`,{method:'POST'});
+    // Remove from list
+    document.getElementById('ei-'+id)?.remove();
+    const cnt=document.querySelectorAll('.eitem').length;
+    document.getElementById('inboxCnt').textContent=cnt+' msg';
+    // Clear preview
+    document.getElementById('emailView').innerHTML='<div class="ev-empty"><span style="font-size:32px">🗑</span><span>Emailul a fost mutat în Coș</span></div>';
+    document.getElementById('replyWrap').classList.add('hidden');
+    curEmail=null;
+  } catch(e) {
+    alert('Eroare la ștergere: '+e.message);
+  }
+}
+function composeNew() {
+  _composeMode = true;
+  document.getElementById('rTo').value = '';
+  document.getElementById('rSubj').value = '';
+  document.getElementById('replyBody').value = '';
+  document.getElementById('varsRow').textContent = '';
+  clearAttachedFiles();
+  setStatus('');
+  document.getElementById('replyWrap').classList.remove('hidden');
+  document.getElementById('rTo').focus();
+  // Visual indicator — green border on To field
+  document.getElementById('rTo').style.borderColor = '#22c55e';
+}
+
+function clearReply(){
+  _composeMode = false;
+  document.getElementById('replyBody').value='';
+  document.getElementById('varsRow').textContent='';
+  document.querySelectorAll('.tcard').forEach(el=>el.classList.remove('active'));
+  clearAttachedFiles();
+  closeTmplPreview();
+  setStatus('');
+  document.getElementById('rTo').style.borderColor='';
+}
+function setStatus(msg,err=false){
+  const el=document.getElementById('rStatus');
+  el.textContent=msg; el.className='r-status '+(err?'err':'ok');
+}
+
+// ══════════════════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
+// HISTORY SIDEBAR
+// ══════════════════════════════════════════════════════════
+function toggleHistory(){
+  const col=document.getElementById('colHistory');
+  const btn=col.querySelector('.hist-toggle');
+  col.classList.toggle('collapsed');
+  btn.textContent=col.classList.contains('collapsed')?'▶':'◀';
+}
+
+async function loadHistory(contactEmail, currentId) {
+  const body=document.getElementById('historyBody');
+  body.innerHTML='<div class="load-row"><div class="spinner"></div></div>';
+  // Update header to show contact
+  const hdr=document.querySelector('#colHistory .col-hdr h3');
+  if(hdr) hdr.title=contactEmail;
+
+  try {
+    const q=`from:${contactEmail} OR to:${contactEmail}`;
+    const data=await api(`${BASE}/messages?${new URLSearchParams({q,maxResults:40})}`);
+    const msgs=data.messages||[];
+    if(!msgs.length){
+      body.innerHTML='<div class="hist-empty">Niciun mesaj anterior cu acest contact</div>';
+      return;
+    }
+    // Fetch metadata in batches of 8
+    const meta=[];
+    for(let i=0;i<msgs.length;i+=8){
+      const batch=await Promise.all(msgs.slice(i,i+8).map(m=>
+        api(`${BASE}/messages/${m.id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`)
+      ));
+      meta.push(...batch);
+    }
+    meta.sort((a,b)=>parseInt(b.internalDate)-parseInt(a.internalDate));
+
+    body.innerHTML=meta.map(md=>{
+      const h2=Object.fromEntries((md.payload?.headers||[]).map(x=>[x.name,x.value]));
+      const isSent=(md.labelIds||[]).includes('SENT');
+      const isCurrent=md.id===currentId;
+      return `<div class="hitem ${isCurrent?'is-current':''}" onclick="viewEmail('${md.id}')">
+        <div class="hi-top">
+          <span class="hi-dir ${isSent?'sent':'recv'}">${isSent?'▶ trimis':'◀ primit'}</span>
+          <span class="hi-date">${fmtDateFull(parseInt(md.internalDate))}</span>
+        </div>
+        <div class="hi-subj">${esc(h2.Subject||'(fără subiect)')}</div>
+      </div>`;
+    }).join('');
+  } catch(e){
+    body.innerHTML=`<div class="hist-empty" style="color:var(--red)">${esc(e.message)}</div>`;
+  }
+}
+
+function toggleSidebarWide(){
+  const sb=document.querySelector('.col-sidebar');
+  sb.classList.toggle('wide');
+  document.getElementById('btnExpandSb').textContent=sb.classList.contains('wide')?'⤡':'⤢';
+}
+// Safe large-binary → base64 (chunked to avoid spread stack overflow)
+function bytesToB64(bytes){
+  let bin=''; const chunk=8192;
+  for(let i=0;i<bytes.length;i+=chunk)
+    bin+=String.fromCharCode(...bytes.subarray(i,Math.min(i+chunk,bytes.length)));
+  return btoa(bin);
+}
+function imageToCanvas(b64std,mime){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.onload=()=>{
+      const c=document.createElement('canvas');
+      c.width=img.naturalWidth; c.height=img.naturalHeight;
+      c.getContext('2d').drawImage(img,0,0);
+      c.toBlob(blob=>{
+        blob.arrayBuffer().then(buf=>resolve(new Uint8Array(buf))).catch(reject);
+      },'image/png');
+    };
+    img.onerror=reject;
+    img.src=`data:${mime};base64,${b64std}`;
+  });
+}
+function loadScript(src){
+  return new Promise((res,rej)=>{
+    const s=document.createElement('script');s.src=src;
+    s.onload=res;s.onerror=rej;document.head.appendChild(s);
+  });
+}
+function fileIcon(mime){
+  if(mime.includes('word')||mime.includes('doc')) return '📝';
+  if(mime.includes('excel')||mime.includes('sheet')||mime.includes('xls')) return '📊';
+  if(mime.includes('zip')||mime.includes('rar')) return '🗜';
+  if(mime.includes('text')) return '📄';
+  return '📁';
+}
+function senderName(from){const m=from.match(/^"?([^"<]+)"?\s*</);return m?m[1].trim():from.replace(/<.*>/,'').trim()||from;}
+function extractEmail(from){const m=from.match(/<([^>]+)>/);return m?m[1]:from;}
+function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmtDateFull(ts){
+  const d=new Date(ts),n=new Date(),diff=(n-d)/1000;
+  if(diff<86400&&d.getDate()===n.getDate()) return d.toLocaleTimeString('ro',{hour:'2-digit',minute:'2-digit'});
+  if(diff<172800) return 'ieri '+d.toLocaleTimeString('ro',{hour:'2-digit',minute:'2-digit'});
+  return d.toLocaleDateString('ro',{day:'numeric',month:'short',year:'numeric'});
+}
+function fmtDate(ts){
+  const d=new Date(ts),n=new Date(),diff=(n-d)/1000;
+  if(diff<86400&&d.getDate()===n.getDate()) return d.toLocaleTimeString('ro',{hour:'2-digit',minute:'2-digit'});
+  if(diff<172800) return 'ieri';
+  return d.toLocaleDateString('ro',{day:'numeric',month:'short'});
+}
+function fmtSize(b){if(!b)return'';if(b<1024)return b+' B';if(b<1048576)return Math.round(b/1024)+' KB';return(b/1048576).toFixed(1)+' MB';}
+function realMime(mime,filename){
+  if(mime&&mime!=='application/octet-stream'&&mime!=='application/x-download') return mime;
+  const ext=(filename||'').split('.').pop().toLowerCase();
+  return {pdf:'application/pdf',jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',
+    gif:'image/gif',webp:'image/webp',bmp:'image/bmp',tiff:'image/tiff',tif:'image/tiff',
+    doc:'application/msword',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    xls:'application/vnd.ms-excel',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    zip:'application/zip',txt:'text/plain'}[ext]||mime||'application/octet-stream';
+}
+
+// ══════════════════════════════════════════════════════════
+// DOCUMENT TYPE OPTIONS (Options Manager sync — 91 opțiuni)
+// ══════════════════════════════════════════════════════════
+const DOC_OPTIONS = {
+  'Deces & Moștenire': [
+    'C Deces','Adeverinta deces','Certificat medical constatator al Decesului',
+    'Certificat de mostenitor','Certificat de legatar','Declaratie notariala mostenitor',
+    'CI mostenitor','Contract de vanzare drepturi succesorale','Testament','NI',
+    'Modificare cont mostenitor','Decese DGASP'
+  ],
+  'Acte identitate & Domiciliu': [
+    'CI','CI anterior','CI provizoriu','CIE','CI titular iban',
+    'Viza resedinta','Certificat domiciliu','Certificat atestare domiciliu',
+    'Declaratie domiciliu Ucraina','Pasaport','Permis de sedere','Permis de sedere anterior'
+  ],
+  'Financiar & Cont': [
+    'Extras cont','Extras UNIcredit','Self Pay','Plata online','Plata bancara',
+    'CF','Cont fiscal','CAF','CAF sector diferit',
+    'Declaratie consimtamant cont','Cerere modificare cont','Cerere modificare cont inactiv',
+    'Adresa cont invalid','Adresa instiintare cont inactiv',
+    'Nota restituire bani necuveniti','Scutire DITL S5'
+  ],
+  'Certificat Handicap & Medical': [
+    'CH','CH neincadrare','Certificat de calitate','Decizie ANPDPD',
+    'Decizii comisia superioara','Imposibilitate repunere','Institutionalizat'
+  ],
+  'Cereri & Solicitări': [
+    'Cerere','Cerere acordare SAH ramas neincasat','Cerere sistare stimulent',
+    'Solicitare adeverinta','Solicitare Adeverinta Notar',
+    'Petitie','Sesizare','Raspuns sesizare','Plangere Administrativa Prealabila',
+    'Declaratie','Declaratie DITL','Declaratie DITL Ucraina',
+    'Tutela','Curatela','Procura','Dispozitie DGASPC'
+  ],
+  'Adeverințe': [
+    'Adeverinta DITL','Adeverinta DGASPC','Adeverinta DEP',
+    'Adeverinta Evidenta Populatiei','Adeverinta domiciliu',
+    'Adeverinta asociatia de proprietari','Adeverinta medic famile',
+    'Adverinta MMFTSS','Actualizare dosar','Dosar complet'
+  ],
+  'Hotărâri & Decizii juridice': [
+    'H Judecat','H Judecat Plata esalonata','Comunicare Hotarare Civila',
+    'Sentinta divort','Certificat de casatorie','Certificat de divort',
+    'Decizie de impunere','Decizie DITL esalonare plata',
+    'Certificat anulare proces verbal','Proces Verbal amenda'
+  ],
+  'Corespondență administrativă': [
+    'Adresa respingere','Adresa incetare','Clarificare DITL','Clarificare DGASPC',
+    'Interogare lunara','Interogare termen','Reinterogare',
+    'Nota inaintare plati restante','Referat Necesar',
+    'Document informativ scoatere evidenta fiscala contribuabil',
+    'Centralizator Adulti'
+  ],
+  'DITL & Fiscal': [
+    'Adeverinta DITL','Declaratie DITL','Declaratie DITL Ucraina',
+    'Clarificare DITL','Decizie DITL esalonare plata',
+    'Document informativ scoatere evidenta fiscala contribuabil','Scutire DITL S5'
+  ],
+};
+
+let _docOptionsCache = null;
+
+async function loadDocOptions() {
+  // Fetch live from Options sheet column A
+  try {
+    const range = encodeURIComponent("'Options'!A:A");
+    const url = `${SHEETS_BASE}/${SHEETS_ID}/values/${range}`;
+    const data = await api(url);
+    const col = (data.values||[]).flat().map(s=>s.trim()).filter(Boolean);
+    if(col.length > 1) _docOptionsCache = col; // col[0] is header
+  } catch(e) { /* use hardcoded list */ }
+}
+
+function renderDocOptions(container, selectedArr=[]) {
+  const sel = new Set(selectedArr);
+  let html = '';
+  if(_docOptionsCache) {
+    // Render flat list from live cache
+    html += '<div class="doc-cat-lbl">Opțiuni din Registru</div>';
+    html += _docOptionsCache.map(opt=>`
+      <label class="doc-opt">
+        <input type="checkbox" data-docopt="${esc(opt)}" ${sel.has(opt)?'checked':''} onchange="syncDocOptInput()">
+        ${esc(opt)}
+      </label>`).join('');
+  } else {
+    // Use hardcoded categorized list
+    for(const [cat, opts] of Object.entries(DOC_OPTIONS)) {
+      html += `<div class="doc-cat-lbl">${cat}</div>`;
+      html += opts.map(opt=>`
+        <label class="doc-opt">
+          <input type="checkbox" data-docopt="${esc(opt)}" ${sel.has(opt)?'checked':''} onchange="syncDocOptInput()">
+          ${esc(opt)}
+        </label>`).join('');
+    }
+  }
+  container.innerHTML = html;
+}
+
+function syncDocOptInput() {
+  const checked = [...document.querySelectorAll('#regDocOpts input[data-docopt]:checked')]
+    .map(el=>el.dataset.docopt);
+  document.getElementById('regContinut').value = checked.join(', ');
+  document.getElementById('regContinutSel').textContent = checked.length ? `(${checked.length} bifate)` : '';
+  // Auto-fill attachment name: {indicativ}/{doc_types}.pdf
+  if(checked.length) {
+    const nr = document.getElementById('regNextNr').dataset.nr || '';
+    const prefix = nr ? `${nr}/` : '';
+    document.getElementById('regAtas').value = `${prefix}${checked.join(', ')}.pdf`;
+  }
+  // Sync attachment rename field with checked doc type names
+  syncAttRenameFromReg();
+}
+
+function syncAttRenameFromReg() {
+  const checked = [...document.querySelectorAll('#regDocOpts input[data-docopt]:checked')]
+    .map(el => el.dataset.docopt);
+  if (!checked.length) return;
+  // Build safe filename: keep original extension, replace stem with doc type names
+  const ext = curAttFilename ? '.' + curAttFilename.split('.').pop() : '.pdf';
+  const safe = checked.join('_').replace(/[\\/:*?"<>|]/g, '-');
+  const newName = safe + ext;
+  document.getElementById('attRename').value = newName;
+  document.getElementById('attSidebarName').textContent = newName;
+  curAttFilename = newName;
+  // Update chip name inline for the open attachment
+  const openChip = document.querySelector('.att-chip-name[data-attid]');
+  if (openChip) {
+    const attId = openChip.closest('.att-chip')?.dataset.attid;
+    if (attId) {
+      attRenames[attId] = newName;
+      document.querySelector(`.att-chip-name[data-attid="${attId}"]`).textContent = newName;
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// REGISTRU VIEWER
+// ══════════════════════════════════════════════════════════
+let selectedRegistruRowNum = null; // sheet row number (1-based) selected in viewer
+let _registruAllRows = [];         // cache for viewer data
+
+async function showRegistruViewer(selectMode=false) {
+  document.getElementById('registruModal').classList.remove('hidden');
+  if(selectMode) {
+    document.getElementById('regViewSelInfo').textContent='👆 Click pe rândul în care vrei să înscrii, apoi apasă "✏️ Înscrie în acest rând"';
+    document.getElementById('regViewSelInfo').style.color='var(--accent)';
+  }
+  await refreshRegistruViewer();
+}
+
+async function refreshRegistruViewer() {
+  const st = document.getElementById('regViewStatus');
+  st.style.color='var(--text3)'; st.textContent='Se încarcă...';
+  document.getElementById('regViewHead').innerHTML='';
+  document.getElementById('regViewBody').innerHTML='';
+  selectedRegistruRowNum = null;
+  document.getElementById('regViewSelInfo').textContent='';
+  try {
+    const range=encodeURIComponent(`'${SHEET_NAME}'!A1:Y`);
+    const url=`${SHEETS_BASE}/${SHEETS_ID}/values/${range}`;
+    const data=await api(url);
+    _registruAllRows=data.values||[];
+    if(!_registruAllRows.length){st.textContent='Fără date.';return;}
+    const headers=_registruAllRows[0];
+
+    // Build table with actual sheet row numbers (header=1, data starts at 2)
+    document.getElementById('regViewHead').innerHTML=
+      `<tr><th style="padding:5px 6px;border-bottom:2px solid var(--border);font-size:11px;color:var(--text3);white-space:nowrap">#</th>`+
+      headers.map(h=>`<th style="padding:5px 8px;border-bottom:2px solid var(--border);text-align:left;white-space:nowrap;font-size:11px;color:var(--text3)">${esc(h)}</th>`).join('')+
+      '</tr>';
+
+    const today=new Date();
+    const todayStr=`${today.getDate()}.${today.getMonth()+1}.${today.getFullYear()}`;
+    const todayAlt=`${String(today.getDate()).padStart(2,'0')}.${String(today.getMonth()+1).padStart(2,'0')}.${today.getFullYear()}`;
+
+    let firstTodayId=null;
+    const bodyRows=_registruAllRows.slice(1); // skip header
+
+    // Find last COMPLETE registration row (has documente + email + operator + CNP)
+    // cols: L=11 continut, M=12 CNP, O=14 operator, Q=16 email
+    let lastCompleteIdx=-1;
+    bodyRows.forEach((row,ri)=>{
+      const continut=String(row[11]||'').trim();
+      const cnp     =String(row[12]||'').trim();
+      const operator=String(row[14]||'').trim();
+      const email   =String(row[16]||'').trim();
+      const filled  =[continut,cnp,operator,email].filter(Boolean).length;
+      if(filled>=2) lastCompleteIdx=ri;
+    });
+    // Pre-select = row AFTER last complete (next insertion point)
+    const preSelectIdx      = lastCompleteIdx+1;
+    const preSelectSheetRow = preSelectIdx+2; // +2: skip header + 1-based
+    const preSelectId       = `rvr-${preSelectSheetRow}`;
+
+    const lastCompleteSheetRow = lastCompleteIdx>=0 ? lastCompleteIdx+2 : -1;
+
+    document.getElementById('regViewBody').innerHTML=bodyRows.map((row,ri)=>{
+      const sheetRow=ri+2;
+      const dateVal=row[4]||'';
+      const isToday   = dateVal===todayStr||dateVal===todayAlt;
+      const isLastComp= sheetRow===lastCompleteSheetRow;  // ultimul completat
+      const isPreSel  = sheetRow===preSelectSheetRow;     // rândul de după = pre-selecție
+      const rowId=`rvr-${sheetRow}`;
+      if(isToday && !firstTodayId) firstTodayId=rowId;
+
+      let bg='', borderL='', numColor='var(--text3)', numWeight='400', suffix='';
+      if(isToday)    { bg='rgba(37,99,235,.06)'; }
+      if(isLastComp) { bg='rgba(251,191,36,.12)'; borderL='border-left:3px solid #f59e0b;'; numColor='#f59e0b'; numWeight='700'; suffix=' ★'; }
+      if(isPreSel)   { bg='rgba(34,197,94,.15)';  borderL='border-left:3px solid #22c55e;'; numColor='#22c55e'; numWeight='700'; suffix=' ◀'; }
+
+      return `<tr id="${rowId}" data-sheetrow="${sheetRow}" style="cursor:pointer;border-bottom:1px solid var(--border);${bg?'background:'+bg+';':''}${borderL}"
+        onclick="highlightRegistruRow(${sheetRow},${JSON.stringify(row).replace(/"/g,'&quot;')},this)"
+        onmouseover="if(!this.classList.contains('rv-sel'))this.style.background='var(--surface2)'"
+        onmouseout="if(!this.classList.contains('rv-sel'))this.style.background='${bg||''}'">` +
+        `<td style="padding:4px 6px;font-size:11px;font-family:var(--mono);color:${numColor};white-space:nowrap;font-weight:${numWeight}">${sheetRow}${suffix}</td>`+
+        headers.map((_,ci)=>`<td style="padding:4px 8px;white-space:nowrap;font-size:12px;${isLastComp||isPreSel?'font-weight:500':''}">${esc(row[ci]||'')}</td>`).join('')+
+        '</tr>';
+    }).join('');
+
+    st.textContent=`${bodyRows.length} înregistrări · ★ galben = ultimul completat · ◀ verde = următorul rând`;
+
+    // Auto-scroll to pre-select row (next insertion point)
+    const scrollTarget = preSelectId || firstTodayId;
+    if(scrollTarget) {
+      setTimeout(()=>{
+        const el=document.getElementById(scrollTarget);
+        if(el) el.scrollIntoView({block:'center',behavior:'smooth'});
+      },150);
+    }
+
+    // Auto-highlight the pre-select row so "Înscrie" is ready immediately
+    if(preSelectIdx < bodyRows.length) {
+      selectedRegistruRowNum = preSelectSheetRow;
+      const preRow = bodyRows[preSelectIdx]||[];
+      document.getElementById('regViewSelInfo').textContent=
+        `Rând #${preSelectSheetRow} pre-selectat — apasă "✏️ Înscrie în acest rând"`;
+    }
+  } catch(e) {
+    st.style.color='var(--red)'; st.textContent='✕ '+e.message;
+  }
+}
+
+function highlightRegistruRow(sheetRow, rowData, trEl) {
+  // Deselect previous
+  document.querySelectorAll('.rv-sel').forEach(el=>{
+    el.classList.remove('rv-sel');
+    el.style.background='';
+  });
+  if(selectedRegistruRowNum===sheetRow) {
+    // Toggle off
+    selectedRegistruRowNum=null;
+    document.getElementById('regViewSelInfo').textContent='';
+    return;
+  }
+  selectedRegistruRowNum=sheetRow;
+  trEl.classList.add('rv-sel');
+  trEl.style.background='rgba(249,115,22,.15)';
+  const indicativ=rowData[6]||'';
+  const selInfo=document.getElementById('regViewSelInfo');
+  selInfo.style.color='var(--accent)';
+  selInfo.textContent=`Rând #${sheetRow} selectat ${indicativ?'('+indicativ+')':''} — apasă "✏️ Înscrie în acest rând"`;
+}
+
+function hideRegistruViewer() {
+  document.getElementById('registruModal').classList.add('hidden');
+}
+
+function openInscriereDirecta() {
+  // Open registru viewer in selection mode, then inscrie in selected row
+  showRegistruViewer(true);
+}
+
+function openRegFromViewer() {
+  const sel = selectedRegistruRowNum;
+  if(!sel) {
+    document.getElementById('regViewSelInfo').textContent='⚠ Selectează mai întâi un rând (click pe el)';
+    document.getElementById('regViewSelInfo').style.color='var(--red,#dc2626)';
+    return;
+  }
+  hideRegistruViewer();
+  // Use fresh OCR/sender data — only borrow the target row number and nr crt from the selected row
+  const row = _registruAllRows[sel-1] || [];
+  _openRegModalWithRow(row, sel);
+}
+
+async function _openRegModalWithRow(row, sheetRow) {
+  // Open registration modal targeting an existing sheet row.
+  // Fields come from OCR/sender (same as showRegModal) — NOT from the existing row.
+  // Only the target row number and the Nr crt value are taken from the row.
+  await showRegModal();
+  // Override nr crt display with the selected row's nr crt value
+  const nrCrt = row[0]||''; // Nr crt is first col; will be confirmed by _nrCrtColLetter logic
+  const indicativ = row[6]||'';
+  document.getElementById('regNextNr').textContent=`Rând #${sheetRow}${indicativ?' — '+indicativ:''}`;
+  document.getElementById('regNextNr').dataset.nr = nrCrt || document.getElementById('regNextNr').dataset.nr;
+  document.getElementById('regNextNr').dataset.targetrow = sheetRow;
+}
+
+// ══════════════════════════════════════════════════════════
+// OCR FIELD SELECTION (checklist before OCR)
+// ══════════════════════════════════════════════════════════
+const OCR_FIELDS_LIST = [
+  {key:'CNP',          label:'CNP beneficiar'},
+  {key:'NUME',         label:'Nume beneficiar'},
+  {key:'PRENUME',      label:'Prenume beneficiar'},
+  {key:'titular_CI',   label:'Titular CI (nume+prenume)'},
+  {key:'seria_CI',     label:'Seria și Nr. CI'},
+  {key:'IBAN',         label:'IBAN (extras de cont)'},
+  {key:'titular_cont', label:'Titular cont (extras)'},
+  {key:'banca',        label:'Bancă'},
+  {key:'data_deces',   label:'Data deces (certif. deces)'},
+  {key:'nr_certificat_deces', label:'Nr. certificat deces'},
+  {key:'data_certificat_deces',label:'Data certificat deces'},
+  {key:'grad_handicap',label:'Grad handicap'},
+  {key:'tip_handicap', label:'Tip handicap'},
+  {key:'data_expirarii',label:'Data expirării certif.'},
+  {key:'numar_certificat',label:'Nr. certificat handicap'},
+];
+
+function renderOcrChecklist() {
+  const saved = JSON.parse(localStorage.getItem('ocrFields')||'null');
+  const checked = saved || OCR_FIELDS_LIST.map(f=>f.key);
+  const html = OCR_FIELDS_LIST.map(f=>`
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:2px 0">
+      <input type="checkbox" data-ocrf="${f.key}" ${checked.includes(f.key)?'checked':''} style="accent-color:var(--purple)">
+      ${f.label}
+    </label>`).join('');
+  document.getElementById('ocrSection').innerHTML=`
+    <div style="padding:6px 0 4px;font-size:11px;font-weight:600;color:var(--purple)">Câmpuri de extras:</div>
+    <div id="ocrFieldList">${html}</div>
+    <button style="margin-top:8px;width:100%;background:var(--surface3);border:1px solid var(--border);color:var(--text2);padding:4px 0;border-radius:4px;cursor:pointer;font-size:11px" onclick="saveOcrFields()">💾 Salvează selecția</button>`;
+}
+
+function saveOcrFields() {
+  const sel=[...document.querySelectorAll('#ocrFieldList input[data-ocrf]:checked')].map(el=>el.dataset.ocrf);
+  localStorage.setItem('ocrFields', JSON.stringify(sel));
+  const st=document.createElement('span');
+  st.style.cssText='font-size:11px;color:var(--green);margin-left:8px';
+  st.textContent='✓ salvat';
+  document.querySelector('#ocrSection button').after(st);
+  setTimeout(()=>st.remove(),2000);
+}
+
+function getSelectedOcrFields() {
+  // From checklist if visible, else from localStorage
+  const live=[...document.querySelectorAll('#ocrFieldList input[data-ocrf]:checked')].map(el=>el.dataset.ocrf);
+  if(live.length) return live;
+  const saved=JSON.parse(localStorage.getItem('ocrFields')||'null');
+  return saved||OCR_FIELDS_LIST.map(f=>f.key);
+}
+
+// ══════════════════════════════════════════════════════════
+// REGISTRATION MODAL (Sheets)
+// ══════════════════════════════════════════════════════════
+// Read OCR data: merge persistOcrData with any user edits from contenteditable divs
+function readOcrLive() {
+  const base = {...(persistOcrData||{})};
+  document.querySelectorAll('#ocrSection .ocr-val[data-key]').forEach(el => {
+    base[el.dataset.key] = el.textContent.trim();
+  });
+  document.querySelectorAll('#ocrPersistFields .ocr-persist-row [data-key]').forEach(el => {
+    base[el.dataset.key] = el.textContent.trim();
+  });
+  return base;
+}
+
+// Extract sector number (1-6) from address string e.g. "Sector 3", "sect. 2", "s.4"
+function extractSectorFromAdresa(adresa) {
+  if(!adresa) return '';
+  const m = String(adresa).match(/sect(?:or|\.?)[\s.\-]*([1-6])/i) ||
+            String(adresa).match(/\bs\.?\s*([1-6])\b/i);
+  return m ? m[1] : '';
+}
+
+async function showRegModal() {
+  const modal=document.getElementById('regModal');
+  modal.classList.remove('hidden');
+  // Pre-fill from OCR data — reads live edited values from DOM
+  const ocr=readOcrLive();
+
+  // NUME: prefer explicit NUME key, fallback to first word of titular_CI
+  const numeRaw = ocr.NUME || ocr.titular_CI?.split(' ')[0] || '';
+  // PRENUME: prefer explicit PRENUME key, fallback to rest of titular_CI
+  const prenumeRaw = ocr.PRENUME || ocr.titular_CI?.split(' ').slice(1).join(' ') || '';
+
+  document.getElementById('regNume').value = numeRaw;
+  document.getElementById('regPrenume').value = prenumeRaw;
+  document.getElementById('regCnp').value = ocr.CNP||'';
+
+  // Sector: from explicit SECTOR key OR extracted from adresa
+  const sectorOcr = ocr.SECTOR || ocr.sector || extractSectorFromAdresa(ocr.adresa);
+  document.getElementById('regSector').value = sectorOcr;
+  document.getElementById('regContinut').value = '';
+  document.getElementById('regContinutSel').textContent = '';
+  document.getElementById('regAtas').value = curEmailMeta?.attachments?.join(', ')||'';
+  document.getElementById('regEmail').value = curEmailMeta?extractEmail(curEmailMeta.from):(_lastSenderEmail||'');
+  document.getElementById('regOperator').value = document.getElementById('opInput').value||'';
+  const today=new Date();
+  const dd=String(today.getDate()).padStart(2,'0');
+  const mm=String(today.getMonth()+1).padStart(2,'0');
+  const yyyy=today.getFullYear();
+  document.getElementById('regData').value=`${dd}.${mm}.${yyyy}`;
+  document.getElementById('regStatus').textContent='';
+  document.getElementById('regObs').value='';
+  document.getElementById('regPreviewCol').classList.remove('visible');
+  const _btnReg=document.getElementById('btnDoRegister');
+  _btnReg.style.opacity='.4'; _btnReg.style.pointerEvents='none';
+  // Sender name row — show only if sender info available
+  const sNume    = document.getElementById('senderNume').value.trim();
+  const sPrenume = document.getElementById('senderPrenume').value.trim();
+  const hasSender = sNume || sPrenume;
+  const senderRow = document.getElementById('regSenderRow');
+  senderRow.style.display = hasSender ? 'flex' : 'none';
+  document.getElementById('senderNamePreview').textContent = [sPrenume, sNume].filter(Boolean).join(' ');
+  document.getElementById('chkSenderName').checked = false;
+  document.getElementById('regNextNr').textContent='Se calculează numărul de înregistrare...';
+
+  // Load + render doc options, pre-checking any types assigned via picker
+  if(!_docOptionsCache) await loadDocOptions();
+  const pickerSelected = [...new Set(Object.values(attSelectedDocTypes))];
+  renderDocOptions(document.getElementById('regDocOpts'), pickerSelected);
+  if(pickerSelected.length) syncDocOptInput();
+
+  // Get next registration number
+  try {
+    const nr=await getNextRegNumber();
+    document.getElementById('regNextNr').textContent=`Nr. înregistrare: ${nr}`;
+    document.getElementById('regNextNr').dataset.nr=nr;
+    // Re-trigger attachment name now that nr is known (if doc types already selected)
+    syncDocOptInput();
+  } catch(e) {
+    document.getElementById('regNextNr').textContent='⚠ Nu s-a putut calcula nr. automat';
+  }
+}
+
+function swapSenderName() {
+  const n = document.getElementById('senderNume');
+  const p = document.getElementById('senderPrenume');
+  [n.value, p.value] = [p.value, n.value];
+  [_senderNume, _senderPrenume] = [_senderPrenume, _senderNume];
+}
+
+function swapRegName() {
+  const n = document.getElementById('regNume');
+  const p = document.getElementById('regPrenume');
+  [n.value, p.value] = [p.value, n.value];
+}
+
+function applySenderName(checked) {
+  const nume    = document.getElementById('senderNume').value.trim();
+  const prenume = document.getElementById('senderPrenume').value.trim();
+  if (checked) {
+    document.getElementById('regNume').value    = nume;
+    document.getElementById('regPrenume').value = prenume;
+  }
+}
+
+function showRegPreview() {
+  const nr      = document.getElementById('regNextNr').dataset.nr || '?';
+  const nume    = document.getElementById('regNume').value.trim();
+  const prenume = document.getElementById('regPrenume').value.trim();
+  const cnp     = document.getElementById('regCnp').value.trim();
+  const sector  = document.getElementById('regSector').value;
+  const continut= document.getElementById('regContinut').value.trim();
+  const email   = document.getElementById('regEmail').value.trim();
+  const atas    = document.getElementById('regAtas').value.trim();
+  const operator= document.getElementById('regOperator').value.trim();
+  const data    = document.getElementById('regData').value;
+  const obs     = document.getElementById('regObs').value.trim() || 'Receptionat ' + continut + ', nr.inreg ' + nr;
+
+  const rows = [
+    ['A', 'Nr. curent',    nr],
+    ['E', 'Data',          data],
+    ['H', 'Nume',          nume],
+    ['I', 'Prenume',       prenume],
+    ['J', 'Nume Prenume',  nume + ' ' + prenume],
+    ['L', 'Continut',      continut],
+    ['M', 'CNP',           cnp],
+    ['N', 'Sector',        sector],
+    ['O', 'Operator',      operator],
+    ['Q', 'Email',         email],
+    ['R', 'Observatii',    obs],
+    ['Y', 'Atasamente',    atas],
+  ];
+
+  const tbody = document.getElementById('regPreviewBody');
+  tbody.textContent = '';
+  rows.forEach(([col, label, val]) => {
+    const tr = document.createElement('tr');
+    const tdCol = document.createElement('td'); tdCol.textContent = col;
+    const tdLbl = document.createElement('td'); tdLbl.textContent = label;
+    const tdVal = document.createElement('td');
+    if (val) { tdVal.textContent = val; }
+    else { tdVal.textContent = '—'; tdVal.style.cssText = 'color:var(--text3);font-style:italic'; }
+    tr.append(tdCol, tdLbl, tdVal);
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('regPreviewCol').classList.add('visible');
+  const btn = document.getElementById('btnDoRegister');
+  btn.style.opacity = '1';
+  btn.style.pointerEvents = 'auto';
+}
+
+function hideRegModal() {
+  document.getElementById('regModal').classList.add('hidden');
+  document.getElementById('chkSenderName').checked = false;
+  document.getElementById('regPreviewCol').classList.remove('visible');
+  const btn = document.getElementById('btnDoRegister');
+  btn.style.opacity = '.4';
+  btn.style.pointerEvents = 'none';
+}
+
+async function getLastSheetRow() {
+  // Fetch cols E(4=data), L(11=continut), M(12=CNP), Q(16=email) to find last real registration row
+  // A row counts only if at least 2 of these 4 fields are non-empty (avoids stray/partial rows)
+  const range=encodeURIComponent(`'${SHEET_NAME}'!A:Q`);
+  const data=await api(`${SHEETS_BASE}/${SHEETS_ID}/values/${range}`);
+  const rows=(data.values||[]);
+  let lastRow=1;
+  rows.forEach((r,i)=>{
+    const filled=[r[4],r[11],r[12],r[16]].filter(v=>v&&String(v).trim()).length;
+    if(filled>=2) lastRow=i+1;
+  });
+  return lastRow;
+}
+
+let _nrCrtColLetter='A'; // cached — updated by findNrCrtCol()
+async function findNrCrtCol() {
+  const hRange=encodeURIComponent(`'${SHEET_NAME}'!1:1`);
+  const hData=await api(`${SHEETS_BASE}/${SHEETS_ID}/values/${hRange}`);
+  const headers=(hData.values||[[]])[0]||[];
+  const idx=headers.findIndex(h=>/nr\.?\s*crt/i.test(String(h).trim()));
+  if(idx>=0) {
+    // Convert index to column letter (0=A, 25=Z, 26=AA...)
+    let col='', n=idx;
+    do { col=String.fromCharCode(65+(n%26))+col; n=Math.floor(n/26)-1; } while(n>=0);
+    _nrCrtColLetter=col;
+  }
+  return _nrCrtColLetter;
+}
+async function getNextRegNumber() {
+  const col=await findNrCrtCol();
+  const range=encodeURIComponent(`'${SHEET_NAME}'!${col}:${col}`);
+  const data=await api(`${SHEETS_BASE}/${SHEETS_ID}/values/${range}`);
+  let maxN=0;
+  (data.values||[]).flat().forEach(v=>{ const n=parseInt(v); if(!isNaN(n)&&n>maxN) maxN=n; });
+  return maxN+1;
+}
+
+async function doRegister() {
+  const nume=document.getElementById('regNume').value.trim();
+  const prenume=document.getElementById('regPrenume').value.trim();
+  const cnp=document.getElementById('regCnp').value.trim();
+  const sector=document.getElementById('regSector').value;
+  const continut=document.getElementById('regContinut').value.trim();
+  const email=document.getElementById('regEmail').value.trim();
+  const atas=document.getElementById('regAtas').value.trim();
+  const operator=document.getElementById('regOperator').value.trim();
+  const dataStr=document.getElementById('regData').value;
+  const nrEl=document.getElementById('regNextNr');
+  let nr=nrEl.dataset.nr||'';
+  const targetRow=parseInt(nrEl.dataset.targetrow||'0')||0;
+
+  if(!nume||!prenume){alert('Completează Nume și Prenume.');return;}
+  if(!continut){alert('Completează Conținutul documentului.');return;}
+
+  const st=document.getElementById('regStatus');
+  st.style.color='var(--text3)'; st.textContent='Se înregistrează...';
+
+  try {
+    const today=new Date();
+    // If no indicativ yet (new row), calculate it
+    if(!nr||nr.startsWith('Se calculează')||nr.startsWith('Rând')||nr.startsWith('⚠')) {
+      nr=await getNextRegNumber();
+    }
+    const obs=`Receptionat ${continut}, nr.inreg ${nr}`;
+    const row=[
+      nr,                     // A Nr. curent (integer: 853)
+      today.getMonth()+1,     // B Luna
+      today.getDate(),        // C Ziua
+      today.getFullYear(),    // D Anul
+      dataStr,                // E Data inregistrarii
+      '',                     // F Nr. si data documentului
+      '',                     // G Indicativ — formula in sheet (concateneaza A+E)
+      nume,                   // H Nume
+      prenume,                // I Prenume
+      `${nume} ${prenume}`,   // J Nume Prenume
+      '',                     // K blank
+      continut,               // L Continut
+      cnp,                    // M CNP
+      sector,                 // N Sector
+      operator,               // O Operator
+      '',                     // P blank
+      email,                  // Q Email
+      obs,                    // R Observatii
+      '',                     // S Campaign status (Apps Script fills)
+      '',                     // T Eroare email
+      '',                     // U Data trimiterii (Apps Script fills)
+      '',                     // V Col1
+      '',                     // W Status Email
+      '',                     // X Col2
+      atas,                   // Y Denumire atasament
+    ];
+
+    async function writeRow(sheetRow, rowData) {
+      const r=encodeURIComponent(`'${SHEET_NAME}'!A${sheetRow}:Y${sheetRow}`);
+      const url=`${SHEETS_BASE}/${SHEETS_ID}/values/${r}?valueInputOption=USER_ENTERED`;
+      try {
+        await api(url,{method:'PUT',body:JSON.stringify({values:[rowData]})});
+      } catch(e) {
+        if(e.message&&e.message.includes('exceeds grid limits')) {
+          // Sheet is full — add 200 rows then retry
+          st.textContent='Extind foaia (limită rânduri)...';
+          await api(`${SHEETS_BASE}/${SHEETS_ID}:batchUpdate`,{method:'POST',
+            body:JSON.stringify({requests:[{appendDimension:{sheetId:1630405736,dimension:'ROWS',length:200}}]})});
+          await api(url,{method:'PUT',body:JSON.stringify({values:[rowData]})});
+        } else { throw e; }
+      }
+    }
+
+    let writtenRow;
+    if(targetRow > 1) {
+      await writeRow(targetRow, row);
+      writtenRow=targetRow;
+    } else {
+      const lastRow=await getLastSheetRow();
+      writtenRow=lastRow+1;
+      await writeRow(writtenRow, row);
+    }
+    st.style.color='var(--green)';
+    st.textContent=`✓ Înregistrat: ${nr}`;
+    nrEl.dataset.targetrow='';
+    _registruAllRows=[]; // invalidate viewer cache
+    if(curEmail?.id) { _emailsRegistered.add(curEmail.id); updateMiniStats(); }
+
+    // ── Auto-send confirmation reply ──────────────────────────
+    let emailStatus='';
+    if(email) {
+      try {
+        st.textContent=`✓ Înregistrat: ${nr} — se trimite confirmare...`;
+        const replySubj = _lastSubject ? ((_lastSubject.startsWith('Re:')?'':'Re: ')+_lastSubject) : 'Re: Înregistrare documente';
+        const replyBody = `Numărul de înregistrare al documentelor transmise instituției noastre este: ${nr}, iar acestea vor fi procesate în cel mai scurt timp posibil.`
+          + FOOTER.replace('{OP}', operator||document.getElementById('opInput').value||'');
+        const raw=buildMime({to:email, subject:replySubj, body:replyBody, inReplyTo:_lastMsgId||undefined});
+        const sendBody={raw};
+        if(_lastThreadId) sendBody.threadId=_lastThreadId;
+        await api(`${BASE}/messages/send`,{method:'POST',body:JSON.stringify(sendBody)});
+        // Mark T="Trimis" and U=date in sheet
+        const today2=new Date();
+        const dateU=`${String(today2.getDate()).padStart(2,'0')}.${String(today2.getMonth()+1).padStart(2,'0')}.${today2.getFullYear()}`;
+        const tuRange=encodeURIComponent(`'${SHEET_NAME}'!T${writtenRow}:U${writtenRow}`);
+        await api(`${SHEETS_BASE}/${SHEETS_ID}/values/${tuRange}?valueInputOption=USER_ENTERED`,
+          {method:'PUT',body:JSON.stringify({values:[['Trimis',dateU]]})});
+        emailStatus=`✓ Email trimis la ${email}`;
+        st.textContent=`✓ Înregistrat: ${nr} | Email trimis!`;
+      } catch(emailErr) {
+        emailStatus=`⚠ Înregistrat, dar email NEREUȘIT: ${emailErr.message.slice(0,60)}`;
+        st.textContent=`✓ Înregistrat: ${nr} | ⚠ Email eșuat`;
+      }
+    } else {
+      emailStatus='⚠ Email expeditor lipsă — trimitere automată omisă';
+      st.textContent=`✓ Înregistrat: ${nr} | ⚠ fără email expeditor`;
+    }
+
+    // Show confirmation in OCR persist panel sidebar
+    showRegConfirmInSidebar(nr, email, emailStatus);
+    setTimeout(hideRegModal, 3000);
+  } catch(e) {
+    st.style.color='var(--red)'; st.textContent='✕ Eroare: '+e.message;
+  }
+}
+
+function updateMiniStats() {
+  const total = allEmails.length;
+  const withAtt = _emailsWithAtts.size;
+  const reg = _emailsRegistered.size;
+  const el = id => document.getElementById(id);
+  if(el('mssTotal')) el('mssTotal').textContent = total || '—';
+  if(el('mssWithAtt')) el('mssWithAtt').textContent = withAtt;
+  if(el('mssReg')) el('mssReg').textContent = reg;
+  if(el('mssFill')) {
+    const pct = withAtt > 0 ? Math.round((reg / withAtt) * 100) : 0;
+    el('mssFill').style.width = pct + '%';
+    el('mssFill').title = `${reg} din ${withAtt} cu atașamente înregistrate (${pct}%)`;
+  }
+}
+
+function showRegConfirmInSidebar(nr, toEmail, emailStatus) {
+  // Ensure OCR persist panel is visible
+  const panel=document.getElementById('ocrPersistPanel');
+  if(panel) panel.classList.remove('hidden');
+  const fields=document.getElementById('ocrPersistFields');
+  if(!fields) return;
+  const prev=fields.innerHTML;
+  const confHtml=`<div style="margin-top:8px;padding:8px 10px;background:rgba(34,197,94,.1);border:1.5px solid rgba(34,197,94,.4);border-radius:6px;font-size:12px">
+    <div style="font-weight:700;color:var(--green,#16a34a);margin-bottom:4px">✓ Înregistrat în Registru</div>
+    <div><b>Indicativ:</b> ${esc(nr)}</div>
+    ${toEmail?`<div><b>Email:</b> ${esc(toEmail)}</div>`:''}
+    <div style="margin-top:4px;color:${emailStatus.startsWith('✓')?'var(--green,#16a34a)':'var(--red,#dc2626)'}">${esc(emailStatus)}</div>
+  </div>`;
+  // Prepend confirmation to existing OCR fields
+  fields.innerHTML=confHtml+prev;
+}
+</script>
+
+<!-- ══ REGISTRU VIEWER MODAL ══ -->
+<div id="registruModal" class="reg-modal hidden" onclick="if(event.target===this)hideRegistruViewer()">
+  <div class="reg-card" style="width:1400px;max-width:99vw">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <h3 style="margin:0">📊 Registru Email 43/2026 — ultimele înregistrări</h3>
+      <div style="display:flex;gap:7px;flex-wrap:wrap">
+        <button class="btn btn-send" style="font-size:11px" onclick="openRegFromViewer()">✏️ Înscrie în acest rând</button>
+        <button class="btn btn-draft" style="font-size:11px" onclick="showRegModal();hideRegistruViewer()">+ Înregistrare nouă</button>
+        <button class="btn" style="font-size:11px;background:var(--surface2);border:1px solid var(--border)" onclick="refreshRegistruViewer()" title="Reîncarcă datele din Sheets">🔄 Reîmprospătează</button>
+        <a href="https://docs.google.com/spreadsheets/d/1xFTA80PFIlByy29dBTNfcgeJn9FOXmeEOLCi18Gy6hs/edit?gid=1630405736" target="_blank" class="btn btn-draft" style="font-size:11px;text-decoration:none;display:flex;align-items:center">↗ Sheets</a>
+        <button class="btn btn-clear" onclick="hideRegistruViewer()">✕</button>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px">
+      <div class="reg-status" id="regViewStatus" style="margin:0">Se încarcă...</div>
+      <span id="regViewSelInfo" style="font-size:12px;color:var(--accent);font-style:italic"></span>
+    </div>
+    <div style="overflow-x:auto;max-height:60vh">
+      <table id="regViewTable" style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead id="regViewHead" style="position:sticky;top:0;background:var(--surface2)"></thead>
+        <tbody id="regViewBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══ REGISTRATION MODAL ══ -->
+<div id="regModal" class="reg-modal hidden" onclick="if(event.target===this)hideRegModal()">
+  <div class="reg-card">
+
+    <!-- STÂNGA: formular -->
+    <div class="reg-form-col">
+      <h3>📋 Înregistrare Registru Email 43/2026</h3>
+      <div class="reg-sub" id="regNextNr">Se calculează numărul...</div>
+      <div id="regSenderRow" style="display:none;align-items:center;gap:8px;padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-size:12px">
+        <input type="checkbox" id="chkSenderName" onchange="applySenderName(this.checked)" style="cursor:pointer">
+        <label for="chkSenderName" style="cursor:pointer;color:var(--text2)">Folosește numele expeditorului:
+          <strong id="senderNamePreview" style="color:var(--text)"></strong>
+        </label>
+      </div>
+      <div class="reg-grid">
+        <div class="reg-field">
+          <label style="display:flex;align-items:center;gap:6px">Nume beneficiar
+            <button type="button" onclick="swapRegName()" title="Inversează Nume ↔ Prenume" style="background:none;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:11px;padding:0 5px;color:var(--text2);line-height:1.6">⇄</button>
+          </label>
+          <input id="regNume" type="text" placeholder="NUME">
+        </div>
+        <div class="reg-field">
+          <label>Prenume beneficiar</label>
+          <input id="regPrenume" type="text" placeholder="PRENUME">
+        </div>
+        <div class="reg-field">
+          <label>CNP</label>
+          <input id="regCnp" type="text" placeholder="CNP">
+        </div>
+        <div class="reg-field">
+          <label>Sector</label>
+          <select id="regSector">
+            <option value="">— alege —</option>
+            <option>1</option><option>2</option><option>3</option>
+            <option>4</option><option>5</option><option>6</option>
+          </select>
+        </div>
+        <div class="reg-field full">
+          <label>Conținut document — bifează tipurile primite <span id="regContinutSel" style="color:var(--accent);font-weight:600;margin-left:6px"></span></label>
+          <div id="regDocOpts" style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:8px 10px;max-height:160px;overflow-y:auto;display:flex;flex-direction:column;gap:2px"></div>
+          <input id="regContinut" type="text" placeholder="Sau scrie manual / editează selecția..." style="margin-top:5px">
+        </div>
+        <div class="reg-field full">
+          <label>Email expeditor</label>
+          <input id="regEmail" type="email" placeholder="email@domain.com">
+        </div>
+        <div class="reg-field full">
+          <label>Denumire atașamente</label>
+          <input id="regAtas" type="text" placeholder="fisier1.pdf, fisier2.pdf">
+        </div>
+        <div class="reg-field full">
+          <label>Observații</label>
+          <textarea id="regObs" placeholder="Se completează automat..."></textarea>
+        </div>
+        <div class="reg-field">
+          <label>Operator</label>
+          <input id="regOperator" type="text" placeholder="Nume Prenume">
+        </div>
+        <div class="reg-field">
+          <label>Data înregistrării</label>
+          <input id="regData" type="text" readonly style="background:var(--surface3)">
+        </div>
+      </div>
+      <div class="reg-status" id="regStatus"></div>
+      <div class="reg-acts">
+        <button class="btn" style="flex:1;background:var(--surface3);border:1px solid var(--border);color:var(--text2)" onclick="showRegPreview()">👁 Previzualizează</button>
+        <button class="btn btn-send" id="btnDoRegister" style="flex:1;opacity:.4;pointer-events:none" onclick="doRegister()">✓ Înregistrează</button>
+        <button class="btn btn-draft" onclick="hideRegModal()">Anulează</button>
+      </div>
+    </div>
+
+    <!-- DREAPTA: preview rând Sheets -->
+    <div class="reg-preview-col" id="regPreviewCol">
+      <h4>👁 Preview rând Sheets</h4>
+      <div class="reg-preview" id="regPreview" style="display:block">
+        <table>
+          <thead><tr><th>Col</th><th>Câmp</th><th>Valoare</th></tr></thead>
+          <tbody id="regPreviewBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
