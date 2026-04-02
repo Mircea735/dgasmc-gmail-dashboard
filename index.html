@@ -479,16 +479,25 @@ body.sql-panel-open .main{height:calc(var(--sql-panel-h, 46vh) * -1 + 100vh - 48
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
 
 /* ── MINI STATS STRIP (bottom of inbox) ── */
-.mini-stats-strip{flex-shrink:0;border-top:1px solid var(--border);background:var(--surface);padding:7px 10px;display:flex;flex-direction:column;gap:4px;}
-.mss-title{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;justify-content:space-between;}
-.mss-rows{display:flex;flex-direction:column;gap:2px;}
+.mini-stats-strip{flex-shrink:0;border-top:1px solid var(--border);background:var(--surface);padding:7px 10px;display:flex;flex-direction:column;gap:3px;}
+.mss-title{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;}
+.mss-day-hdr{font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:3px 0 1px;border-top:1px solid var(--border);margin-top:2px;display:flex;align-items:center;gap:5px;}
+.mss-day-hdr.today{color:var(--teal);}
+.mss-day-hdr.yest{color:var(--text3);}
+.mss-day-date{font-weight:400;font-size:9px;font-family:var(--mono);opacity:.75;}
+.mss-rows{display:flex;flex-direction:column;gap:1px;}
 .mss-row{display:flex;align-items:center;justify-content:space-between;font-size:11px;}
-.mss-lbl{color:var(--text3);}
-.mss-val{font-family:var(--mono);font-weight:600;color:var(--text2);}
+.mss-lbl{color:var(--text3);font-size:10.5px;}
+.mss-val{font-family:var(--mono);font-weight:600;color:var(--text2);min-width:20px;text-align:right;}
 .mss-val.c-att{color:var(--orange);}
 .mss-val.c-reg{color:var(--green);}
-.mss-bar{height:4px;background:var(--surface3);border-radius:2px;margin-top:3px;overflow:hidden;}
+.mss-val.c-rem{color:var(--yellow);}
+.mss-val.c-rem.zero{color:var(--green);}
+.mss-bar{height:3px;background:var(--surface3);border-radius:2px;margin-top:2px;overflow:hidden;}
 .mss-fill{height:100%;border-radius:2px;background:var(--green);transition:width .4s;}
+.mss-sep{height:1px;background:var(--border);margin:3px 0;}
+.mss-total-row{display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text3);}
+.mss-total-row span:last-child{font-family:var(--mono);font-size:10px;color:var(--text2);}
 </style>
 </head>
 <body>
@@ -587,15 +596,29 @@ body.sql-panel-open .main{height:calc(var(--sql-panel-h, 46vh) * -1 + 100vh - 48
       </div>
       <!-- MINI STATS STRIP -->
       <div class="mini-stats-strip" id="miniStats">
-        <div class="mss-title">
-          <span>📎 Statistici sesiune</span>
-        </div>
+        <div class="mss-title">📊 Activitate zilnică</div>
+
+        <!-- AZI -->
+        <div class="mss-day-hdr today">AZI <span class="mss-day-date" id="mssTodayDate"></span></div>
         <div class="mss-rows">
-          <div class="mss-row"><span class="mss-lbl">Emailuri încărcate</span><span class="mss-val" id="mssTotal">—</span></div>
-          <div class="mss-row"><span class="mss-lbl">Cu atașamente (vizionate)</span><span class="mss-val c-att" id="mssWithAtt">0</span></div>
-          <div class="mss-row"><span class="mss-lbl">Înregistrate în Registru</span><span class="mss-val c-reg" id="mssReg">0</span></div>
+          <div class="mss-row"><span class="mss-lbl">📎 cu atașamente</span><span class="mss-val c-att" id="mssTodayAtt">—</span></div>
+          <div class="mss-row"><span class="mss-lbl">✓ răspuns trimis</span><span class="mss-val c-reg" id="mssTodayReg">—</span></div>
+          <div class="mss-row"><span class="mss-lbl">⏳ rămase</span><span class="mss-val c-rem" id="mssTodayRem">—</span></div>
         </div>
-        <div class="mss-bar"><div class="mss-fill" id="mssFill" style="width:0%"></div></div>
+        <div class="mss-bar"><div class="mss-fill" id="mssFillToday" style="width:0%" title=""></div></div>
+
+        <!-- IERI -->
+        <div class="mss-day-hdr yest">IERI <span class="mss-day-date" id="mssYestDate"></span></div>
+        <div class="mss-rows">
+          <div class="mss-row"><span class="mss-lbl">📎 cu atașamente</span><span class="mss-val c-att" id="mssYestAtt">—</span></div>
+          <div class="mss-row"><span class="mss-lbl">✓ răspuns trimis</span><span class="mss-val c-reg" id="mssYestReg">—</span></div>
+          <div class="mss-row"><span class="mss-lbl">⏳ rămase</span><span class="mss-val c-rem" id="mssYestRem">—</span></div>
+        </div>
+        <div class="mss-bar"><div class="mss-fill" id="mssFillYest" style="width:0%" title=""></div></div>
+
+        <!-- Sesiune -->
+        <div class="mss-sep"></div>
+        <div class="mss-total-row"><span>Emailuri sesiune</span><span id="mssTotal">—</span></div>
       </div>
     </div>
 
@@ -3196,17 +3219,62 @@ async function doRegister() {
 }
 
 function updateMiniStats() {
-  const total = allEmails.length;
-  const withAtt = _emailsWithAtts.size;
-  const reg = _emailsRegistered.size;
   const el = id => document.getElementById(id);
-  if(el('mssTotal')) el('mssTotal').textContent = total || '—';
-  if(el('mssWithAtt')) el('mssWithAtt').textContent = withAtt;
-  if(el('mssReg')) el('mssReg').textContent = reg;
-  if(el('mssFill')) {
-    const pct = withAtt > 0 ? Math.round((reg / withAtt) * 100) : 0;
-    el('mssFill').style.width = pct + '%';
-    el('mssFill').title = `${reg} din ${withAtt} cu atașamente înregistrate (${pct}%)`;
+
+  // Grupează emailuri după zi (ora locală)
+  function dayKey(ts) {
+    const d = new Date(ts);
+    return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  }
+  const now  = new Date();
+  const yest = new Date(now); yest.setDate(yest.getDate() - 1);
+  const todayKey = dayKey(now.getTime());
+  const yestKey  = dayKey(yest.getTime());
+
+  const todayIds = new Set(allEmails.filter(e => dayKey(e.internalDate) === todayKey).map(e => e.id));
+  const yestIds  = new Set(allEmails.filter(e => dayKey(e.internalDate) === yestKey).map(e => e.id));
+
+  const todayAtt = [..._emailsWithAtts].filter(id => todayIds.has(id)).length;
+  const todayReg = [..._emailsRegistered].filter(id => todayIds.has(id)).length;
+  const todayRem = Math.max(0, todayAtt - todayReg);
+
+  const yestAtt  = [..._emailsWithAtts].filter(id => yestIds.has(id)).length;
+  const yestReg  = [..._emailsRegistered].filter(id => yestIds.has(id)).length;
+  const yestRem  = Math.max(0, yestAtt - yestReg);
+
+  const pad2 = n => String(n).padStart(2,'0');
+  const todayFmt = `${pad2(now.getDate())}.${pad2(now.getMonth()+1)}`;
+  const yestFmt  = `${pad2(yest.getDate())}.${pad2(yest.getMonth()+1)}`;
+
+  if(el('mssTodayDate')) el('mssTodayDate').textContent = todayFmt;
+  if(el('mssYestDate'))  el('mssYestDate').textContent  = yestFmt;
+
+  if(el('mssTodayAtt')) el('mssTodayAtt').textContent = todayAtt;
+  if(el('mssTodayReg')) el('mssTodayReg').textContent = todayReg;
+  if(el('mssTodayRem')) {
+    el('mssTodayRem').textContent = todayRem;
+    el('mssTodayRem').className = `mss-val c-rem${todayRem === 0 ? ' zero' : ''}`;
+  }
+
+  if(el('mssYestAtt')) el('mssYestAtt').textContent = yestAtt;
+  if(el('mssYestReg')) el('mssYestReg').textContent = yestReg;
+  if(el('mssYestRem')) {
+    el('mssYestRem').textContent = yestRem;
+    el('mssYestRem').className = `mss-val c-rem${yestRem === 0 ? ' zero' : ''}`;
+  }
+
+  if(el('mssTotal')) el('mssTotal').textContent = allEmails.length || '—';
+
+  // Bare de progres (înregistrate / cu atașamente)
+  if(el('mssFillToday')) {
+    const pct = todayAtt > 0 ? Math.round(todayReg / todayAtt * 100) : 0;
+    el('mssFillToday').style.width = pct + '%';
+    el('mssFillToday').title = `${todayReg} din ${todayAtt} procesate (${pct}%)`;
+  }
+  if(el('mssFillYest')) {
+    const pct = yestAtt > 0 ? Math.round(yestReg / yestAtt * 100) : 0;
+    el('mssFillYest').style.width = pct + '%';
+    el('mssFillYest').title = `${yestReg} din ${yestAtt} procesate (${pct}%)`;
   }
 }
 
