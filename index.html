@@ -663,6 +663,36 @@ let persistOcrData=null, curEmailMeta=null;
 let _lastSenderEmail='', _lastSenderName='', _lastThreadId='', _lastMsgId='', _lastSubject='';
 let _senderNume='', _senderPrenume='';
 
+// Extracts original sender from forwarded email body.
+// Returns { fromLine, email } or null if not a forward.
+function parseOriginalSender(body, subject) {
+  const isFwd = /^(fwd?|fw|re:\s*fwd?|redirecționat|transmis)[\s:]/i.test(subject||'');
+  if (!isFwd && !/forward(ed)?|mesaj redirecționat|----.*forward/i.test(body||'')) return null;
+
+  // Patterns for "From:" line inside the forwarded block
+  // Covers: "From: Name <email>", "De la: Name <email>", "Van:", "From:" alone
+  const lines = (body||'').replace(/\r/g,'').split('\n');
+  // Find the forwarded message separator first
+  const sepIdx = lines.findIndex(l =>
+    /^-{3,}.*forward|^_{3,}.*forward|^\[?forwarded|^mesaj redirecționat|^From:.*@.*>/i.test(l.trim())
+  );
+  const searchFrom = sepIdx >= 0 ? sepIdx : 0;
+
+  for (let i = searchFrom; i < Math.min(lines.length, searchFrom + 30); i++) {
+    const m = lines[i].match(/^(?:from|de la|van|von|от)\s*:\s*(.+)/i);
+    if (!m) continue;
+    const raw = m[1].trim();
+    // Extract email address from angle brackets or bare
+    const emailM = raw.match(/<([^>]+@[^>]+)>/) || raw.match(/([^\s]+@[^\s]+)/);
+    if (!emailM) continue;
+    const email = emailM[1].trim();
+    // Build a "Display Name <email>" string for parseSenderName
+    const namepart = raw.replace(/<[^>]+>/, '').replace(/['"]/g,'').trim() || email;
+    return { fromLine: `${namepart} <${email}>`, email };
+  }
+  return null;
+}
+
 function parseSenderName(from) {
   const cap = w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
 
@@ -1137,16 +1167,47 @@ div[class*="quote"],div[class*="Quote"],div[class*="reply"],div[class*="Reply"],
     _lastThreadId=md.threadId||'';
     _lastMsgId=h['Message-ID']||'';
     _lastSubject=h.Subject||'';
+
+    // For forwarded emails: extract original sender from body
+    const fwdOrig = parseOriginalSender(body, h.Subject||'');
+    const effectiveFrom = fwdOrig ? fwdOrig.fromLine : (h.From||'');
+    if (fwdOrig) {
+      _lastSenderEmail = fwdOrig.email;
+      _lastSenderName  = fwdOrig.fromLine;
+    }
+
     // Extract sender Nume/Prenume
-    const _sp = parseSenderName(h.From||'');
+    const _sp = parseSenderName(effectiveFrom);
     _senderPrenume = _sp.prenume;
     _senderNume    = _sp.nume;
     document.getElementById('senderNume').value    = _senderNume;
     document.getElementById('senderPrenume').value = _senderPrenume;
+    // Show forwarded indicator in the bar label
+    const barLabel = document.querySelector('#senderNameBar .tb-label');
+    if (barLabel) barLabel.textContent = fwdOrig ? 'Inițiator:' : 'Expeditor:';
     document.getElementById('senderNameBar').style.display = '';
 
-    document.getElementById('rTo').value=extractEmail(h.From||'');
-    document.getElementById('rSubj').value=h.Subject?.startsWith('Re:')?h.Subject:'Re: '+(h.Subject||'');
+    document.getElementById('rTo').value = fwdOrig ? fwdOrig.email : extractEmail(h.From||'');
+    // For forward: reply subject should be Re: (strip Fwd: prefix)
+    const cleanSubj = (h.Subject||'').replace(/^(fwd?|fw)\s*:\s*/i,'').trim();
+    document.getElementById('rSubj').value = cleanSubj.startsWith('Re:') ? cleanSubj : 'Re: ' + cleanSubj;
+    // Show fwd badge next to sender bar
+    let fwdBadge = document.getElementById('fwdBadge');
+    if (!fwdBadge) {
+      fwdBadge = document.createElement('span');
+      fwdBadge.id = 'fwdBadge';
+      fwdBadge.style.cssText = 'font-size:10px;padding:2px 6px;border-radius:3px;font-weight:700;letter-spacing:.04em;';
+      document.getElementById('senderNameBar').parentNode.insertBefore(fwdBadge, document.getElementById('senderNameBar').nextSibling);
+    }
+    if (fwdOrig) {
+      fwdBadge.textContent = '↩ Fwd';
+      fwdBadge.style.background = 'rgba(124,58,237,.15)';
+      fwdBadge.style.color = 'var(--purple)';
+      fwdBadge.title = `Forwarded de: ${extractEmail(h.From||'')} — Răspuns merge la inițiator: ${fwdOrig.email}`;
+    } else {
+      fwdBadge.textContent = '';
+      fwdBadge.style.background = 'transparent';
+    }
     document.getElementById('replyBody').value='';
     document.getElementById('varsRow').innerHTML='';
     clearAttachedFiles();
