@@ -348,6 +348,8 @@ button,input,select,textarea{font-family:var(--sans);}
 .sql-table th.sort-asc::after{content:' ▲';font-size:9px;}
 .sql-table th.sort-desc::after{content:' ▼';font-size:9px;}
 .sql-table td{padding:5px 10px;border-bottom:1px solid var(--border);color:var(--text2);white-space:nowrap;max-width:280px;overflow:hidden;text-overflow:ellipsis;}
+.sql-email-btn{background:rgba(37,99,235,.08);border:1px solid var(--accent);color:var(--accent);font-size:10px;padding:2px 8px;border-radius:4px;cursor:pointer;font-family:var(--mono);white-space:nowrap;max-width:240px;overflow:hidden;text-overflow:ellipsis;display:block;}
+.sql-email-btn:hover{background:rgba(37,99,235,.18);}
 .sql-table tr:hover td{background:rgba(15,118,110,.06);}
 .sql-table tr.sql-highlight td{background:rgba(15,118,110,.12);color:var(--text);}
 .sql-footer{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:8px 14px;border-top:1px solid var(--border);background:var(--surface2);font-size:11px;color:var(--text3);flex-wrap:wrap;}
@@ -3292,13 +3294,11 @@ async function loadSqlData() {
 }
 
 // Detect which columns contain email addresses (check column name + sample values)
-function _isEmailCol(colName, rows) {
-  const nameHint = /e.?mail|e-mail|adresa|mail/i.test(colName);
-  if (nameHint) return true;
-  // Sample up to 10 rows — if >50% have @, treat as email col
-  const sample = rows.slice(0, 10).map(r => String(r[colName]||''));
-  const hits = sample.filter(v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()));
-  return hits.length >= Math.max(1, sample.filter(v=>v&&v!=='null').length * 0.5);
+const _reEmail = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]{2,}$/;
+
+function _looksLikeEmail(v) {
+  if (!v && v !== 0) return false;
+  return _reEmail.test(String(v).trim());
 }
 
 function renderSqlTable(rows) {
@@ -3307,41 +3307,44 @@ function renderSqlTable(rows) {
     return;
   }
   const cols = _sqlColumns;
-  // Pre-detect email columns
-  const emailCols = new Set(cols.filter(c => _isEmailCol(c, rows)));
+
+  // Detect which columns contain at least one email value (for header ✉ badge)
+  const emailCols = new Set(cols.filter(c =>
+    rows.slice(0, 20).some(r => _looksLikeEmail(r[c]))
+  ));
+
+  // Pre-compute Nume/Prenume column names once (used in every email cell)
+  const numeCol = cols.find(x => /^(nume|last.?name|nume_ah)$/i.test(x.trim()));
+  const prenCol = cols.find(x => /^(prenume|first.?name|prenume_ah)$/i.test(x.trim()));
 
   let html = '<table class="sql-table"><thead><tr>';
   cols.forEach(c => {
     const sortCls = _sqlSortCol===c ? (_sqlSortAsc?'sort-asc':'sort-desc') : '';
-    const emailMark = emailCols.has(c) ? ' title="Coloană email — click pe adresă pentru a compune mesaj"' : '';
-    html += `<th class="${sortCls}"${emailMark} onclick="sortSqlBy('${esc(c)}')">${esc(c)}${emailCols.has(c)?'<span style="color:var(--accent);margin-left:3px;font-size:9px">✉</span>':''}</th>`;
+    const badge   = emailCols.has(c) ? '<span style="color:var(--accent);margin-left:3px;font-size:9px">✉</span>' : '';
+    html += `<th class="${sortCls}" onclick="sortSqlBy('${esc(c)}')" title="${esc(c)}">${esc(c)}${badge}</th>`;
   });
   html += '</tr></thead><tbody>';
+
   rows.forEach(row => {
+    const nume = numeCol ? String(row[numeCol]||'').trim() : '';
+    const pren = prenCol ? String(row[prenCol]||'').trim() : '';
+    const displayName = `${nume} ${pren}`.trim();
     html += '<tr>';
     cols.forEach(c => {
-      const v = row[c];
+      const v  = row[c];
       const vs = (v === null || v === undefined) ? '' : String(v).trim();
-      if (emailCols.has(c) && vs && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(vs)) {
-        // Render as clickable email link — extracts Nume/Prenume from same row if available
-        const numeCol = cols.find(x => /^nume$/i.test(x) || /^(nume_ah|last.?name)$/i.test(x));
-        const prenCol = cols.find(x => /^prenume$/i.test(x) || /^(prenume_ah|first.?name)$/i.test(x));
-        const nume   = numeCol ? String(row[numeCol]||'').trim() : '';
-        const pren   = prenCol ? String(row[prenCol]||'').trim() : '';
-        const nameJs = JSON.stringify(`${nume} ${pren}`.trim());
+      if (_looksLikeEmail(vs)) {
+        const nameJs  = JSON.stringify(displayName);
         const emailJs = JSON.stringify(vs);
-        html += `<td title="${esc(vs)}">
-          <button onclick="sqlComposeEmail(${emailJs},${nameJs})"
-            style="background:rgba(37,99,235,.08);border:1px solid var(--accent);color:var(--accent);
-                   font-size:10px;padding:2px 7px;border-radius:4px;cursor:pointer;font-family:var(--mono);
-                   white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis;display:block"
-            title="Compune email către ${esc(vs)}">✉ ${esc(vs)}</button></td>`;
+        html += `<td title="${esc(vs)}"><button onclick="sqlComposeEmail(${emailJs},${nameJs})"
+          class="sql-email-btn" title="Compune email către ${esc(vs)}">✉ ${esc(vs)}</button></td>`;
       } else {
         html += `<td title="${esc(vs)}">${esc(vs||'—')}</td>`;
       }
     });
     html += '</tr>';
   });
+
   html += '</tbody></table>';
   document.getElementById('sqlBody').innerHTML = html;
 }
