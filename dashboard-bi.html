@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>DGASMC · Analytics</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer onload="gsiReady()"></script>
+<style>
+:root {
+  --bg:       #07070d;
+  --bg2:      #0d0d16;
+  --surface:  #111120;
+  --card:     #13131f;
+  --card2:    #181828;
+  --border:   rgba(255,255,255,0.06);
+  --border2:  rgba(255,255,255,0.10);
+  --blue:     #3b82f6;
+  --cyan:     #06b6d4;
+  --green:    #10b981;
+  --amber:    #f59e0b;
+  --red:      #ef4444;
+  --purple:   #8b5cf6;
+  --pink:     #ec4899;
+  --teal:     #14b8a6;
+  --text:     #f1f5f9;
+  --text2:    #94a3b8;
+  --text3:    #475569;
+  --mono:     'DM Mono', monospace;
+  --display:  'Syne', sans-serif;
+  --body:     'Plus Jakarta Sans', sans-serif;
+  --glow-blue: 0 0 20px rgba(59,130,246,0.25);
+  --glow-cyan: 0 0 20px rgba(6,182,212,0.25);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{
+  background:var(--bg);color:var(--text);
+  font-family:var(--body);font-size:13px;line-height:1.5;
+  min-height:100vh;overflow-x:hidden;
+}
+
+/* ── ANIMATED BACKGROUND ORBS ── */
+.orb-container{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
+.orb{
+  position:absolute;border-radius:50%;filter:blur(80px);opacity:.18;
+  animation:orbFloat 20s ease-in-out infinite;
+}
+.orb1{width:600px;height:600px;background:radial-gradient(circle,#3b82f6,transparent);top:-200px;left:-100px;animation-delay:0s;}
+.orb2{width:500px;height:500px;background:radial-gradient(circle,#06b6d4,transparent);top:30%;right:-150px;animation-delay:-7s;}
+.orb3{width:400px;height:400px;background:radial-gradient(circle,#8b5cf6,transparent);bottom:-100px;left:40%;animation-delay:-14s;}
+@keyframes orbFloat{
+  0%,100%{transform:translate(0,0) scale(1);}
+  33%{transform:translate(30px,-40px) scale(1.05);}
+  66%{transform:translate(-20px,30px) scale(.96);}
+}
+
+/* ── NOISE TEXTURE ── */
+body::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:1;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  opacity:.022;
+}
+
+/* ── TOPBAR ── */
+.topbar{
+  position:sticky;top:0;z-index:100;
+  height:56px;
+  background:rgba(7,7,13,0.85);
+  backdrop-filter:blur(20px) saturate(1.5);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:14px;padding:0 24px;
+}
+.logo{
+  font-family:var(--display);font-size:15px;font-weight:700;
+  background:linear-gradient(135deg,#fff 0%,var(--cyan) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  letter-spacing:.02em;white-space:nowrap;
+}
+.logo-sub{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.08em;}
+.tb-div{width:1px;height:20px;background:var(--border2);}
+.tb-tag{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.06em;}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:8px;}
+.status-wrap{display:flex;align-items:center;gap:6px;}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--text3);}
+.status-dot.ok{background:var(--green);box-shadow:0 0 6px var(--green);}
+.status-dot.loading{background:var(--amber);animation:blink .7s infinite;}
+.status-dot.err{background:var(--red);}
+.status-txt{font-family:var(--mono);font-size:10px;color:var(--text3);}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+.countdown-pill{
+  font-family:var(--mono);font-size:10px;color:var(--cyan);
+  background:rgba(6,182,212,.1);border:1px solid rgba(6,182,212,.2);
+  border-radius:20px;padding:2px 9px;
+}
+.tb-btn{
+  background:var(--card2);border:1px solid var(--border2);color:var(--text2);
+  font-family:var(--body);font-size:11px;font-weight:500;
+  padding:5px 13px;border-radius:6px;cursor:pointer;transition:all .15s;white-space:nowrap;
+}
+.tb-btn:hover{background:rgba(255,255,255,.08);color:var(--text);border-color:rgba(255,255,255,.15);}
+.tb-btn.accent{background:linear-gradient(135deg,var(--blue),var(--cyan));color:#fff;border:none;}
+.tb-btn.accent:hover{opacity:.85;}
+.hidden{display:none!important;}
+
+/* ── AUTH SCREEN ── */
+.auth-screen{
+  position:fixed;inset:0;z-index:200;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(7,7,13,0.97);backdrop-filter:blur(20px);
+}
+.auth-card{
+  background:var(--card);border:1px solid var(--border2);border-radius:20px;
+  padding:48px 56px;text-align:center;max-width:440px;
+  box-shadow:0 0 80px rgba(59,130,246,.08);
+}
+.auth-card h2{
+  font-family:var(--display);font-size:28px;font-weight:700;
+  background:linear-gradient(135deg,#fff,var(--cyan));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  margin-bottom:12px;
+}
+.auth-card p{color:var(--text2);font-size:13px;margin-bottom:28px;line-height:1.7;}
+.auth-card .hint{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:16px;}
+
+/* ── MAIN ── */
+.main{position:relative;z-index:2;max-width:1440px;margin:0 auto;padding:24px 24px 48px;}
+
+/* ── FILTER BAR ── */
+.filter-bar{
+  display:flex;align-items:center;gap:12px;
+  background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:10px 16px;margin-bottom:24px;
+}
+.filter-label{font-size:11px;color:var(--text3);font-weight:500;white-space:nowrap;}
+.filter-select{
+  background:var(--card2);border:1px solid var(--border2);color:var(--text);
+  font-family:var(--body);font-size:11px;padding:5px 10px;border-radius:6px;cursor:pointer;
+  outline:none;
+}
+.filter-select:focus{border-color:rgba(59,130,246,.5);}
+.filter-count{
+  margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text3);
+  background:rgba(255,255,255,.04);border:1px solid var(--border);
+  padding:3px 10px;border-radius:20px;
+}
+
+/* ── KPI CARDS ── */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px;}
+.kpi-card{
+  background:var(--card);border:1px solid var(--border);border-radius:16px;
+  padding:20px 22px;cursor:default;
+  transition:transform .2s,border-color .2s,box-shadow .2s;
+  position:relative;overflow:hidden;
+  animation:fadeUp .5s both;
+}
+.kpi-card:nth-child(1){animation-delay:.05s;}
+.kpi-card:nth-child(2){animation-delay:.10s;}
+.kpi-card:nth-child(3){animation-delay:.15s;}
+.kpi-card:nth-child(4){animation-delay:.20s;}
+.kpi-card:hover{transform:translateY(-3px);}
+.kpi-card.k-blue{border-color:rgba(59,130,246,.2);}
+.kpi-card.k-blue:hover{border-color:rgba(59,130,246,.4);box-shadow:var(--glow-blue);}
+.kpi-card.k-green{border-color:rgba(16,185,129,.2);}
+.kpi-card.k-green:hover{border-color:rgba(16,185,129,.4);box-shadow:0 0 20px rgba(16,185,129,.2);}
+.kpi-card.k-amber{border-color:rgba(245,158,11,.2);}
+.kpi-card.k-amber:hover{border-color:rgba(245,158,11,.4);box-shadow:0 0 20px rgba(245,158,11,.2);}
+.kpi-card.k-red{border-color:rgba(239,68,68,.2);}
+.kpi-card.k-red:hover{border-color:rgba(239,68,68,.4);box-shadow:0 0 20px rgba(239,68,68,.2);}
+
+.kpi-card::before{
+  content:'';position:absolute;inset:0;opacity:.04;
+  background:radial-gradient(ellipse at top left,var(--kpi-accent,var(--blue)),transparent 70%);
+  pointer-events:none;
+}
+.kpi-card.k-blue{--kpi-accent:var(--blue);}
+.kpi-card.k-green{--kpi-accent:var(--green);}
+.kpi-card.k-amber{--kpi-accent:var(--amber);}
+.kpi-card.k-red{--kpi-accent:var(--red);}
+
+.kpi-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.kpi-label{font-size:11px;font-weight:500;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;}
+.kpi-icon{font-size:16px;opacity:.5;}
+.kpi-value{
+  font-family:var(--display);font-size:36px;font-weight:700;
+  color:var(--text);line-height:1;margin-bottom:10px;
+}
+.kpi-footer{display:flex;align-items:center;gap:8px;}
+.kpi-sub{font-size:11px;color:var(--text3);}
+.trend{
+  display:inline-flex;align-items:center;gap:3px;
+  font-family:var(--mono);font-size:10px;font-weight:500;
+  padding:2px 7px;border-radius:20px;
+}
+.trend.up{color:#10b981;background:rgba(16,185,129,.12);}
+.trend.down{color:#ef4444;background:rgba(239,68,68,.12);}
+.trend.flat{color:var(--text3);background:rgba(255,255,255,.05);}
+
+/* ── CHART GRID ── */
+.charts-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;margin-bottom:20px;
+}
+.charts-row2{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;margin-bottom:20px;
+}
+.chart-card{
+  background:var(--card);border:1px solid var(--border);border-radius:16px;
+  padding:20px 22px;
+  animation:fadeUp .5s both;
+  transition:border-color .2s;
+}
+.chart-card:hover{border-color:var(--border2);}
+.chart-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.chart-title{
+  display:flex;align-items:center;gap:8px;
+  font-family:var(--display);font-size:13px;font-weight:600;color:var(--text);
+}
+.chart-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.chart-meta{font-family:var(--mono);font-size:10px;color:var(--text3);}
+.chart-wrap{position:relative;}
+
+/* ── TABLE ── */
+.table-card{
+  background:var(--card);border:1px solid var(--border);border-radius:16px;
+  overflow:hidden;animation:fadeUp .5s .3s both;
+}
+.table-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:18px 22px 14px;border-bottom:1px solid var(--border);
+}
+.table-hdr h3{font-family:var(--display);font-size:14px;font-weight:600;}
+.table-meta{font-family:var(--mono);font-size:10px;color:var(--text3);}
+table{width:100%;border-collapse:collapse;}
+thead th{
+  font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--text3);padding:9px 16px;text-align:left;
+  background:rgba(255,255,255,.02);border-bottom:1px solid var(--border);
+}
+tbody tr{border-bottom:1px solid var(--border);transition:background .12s;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:rgba(255,255,255,.03);}
+tbody td{padding:9px 16px;font-size:12px;color:var(--text2);}
+.mono{font-family:var(--mono);font-size:11px;}
+td.bold{color:var(--text);font-weight:500;}
+.badge{
+  display:inline-block;font-family:var(--mono);font-size:10px;font-weight:500;
+  padding:2px 9px;border-radius:20px;white-space:nowrap;
+}
+.badge-green{color:#10b981;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.2);}
+.badge-amber{color:#f59e0b;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.2);}
+.badge-red{color:#ef4444;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.2);}
+.badge-gray{color:var(--text3);background:rgba(255,255,255,.05);border:1px solid var(--border);}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(16px);}
+  to{opacity:1;transform:translateY(0);}
+}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .kpi-row{grid-template-columns:repeat(2,1fr);}
+  .charts-grid,.charts-row2{grid-template-columns:1fr;}
+}
+@media(max-width:600px){
+  .kpi-row{grid-template-columns:1fr;}
+  .topbar{gap:8px;padding:0 14px;}
+  .main{padding:14px 14px 40px;}
+}
+</style>
+</head>
+<body>
+
+<div class="orb-container">
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+</div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div>
+    <div class="logo">DGASMC Analytics</div>
+  </div>
+  <div class="tb-div"></div>
+  <div class="tb-tag">REGISTRU E-MAIL 43 · 2026</div>
+  <div class="tb-right">
+    <div class="status-wrap">
+      <div class="status-dot" id="statusDot"></div>
+      <span class="status-txt" id="statusTxt">—</span>
+    </div>
+    <span class="countdown-pill hidden" id="countdownPill">↻ 60s</span>
+    <button class="tb-btn hidden" id="btnAutoRefresh" onclick="toggleAutoRefresh()">⏸ Auto</button>
+    <button class="tb-btn" onclick="refreshData()">↻ Refresh</button>
+    <button class="tb-btn accent hidden" id="btnAuth" onclick="doAuth()">Conectează Google</button>
+    <a href="/" class="tb-btn">← Email</a>
+  </div>
+</div>
+
+<!-- AUTH -->
+<div class="auth-screen hidden" id="authScreen">
+  <div class="auth-card">
+    <div style="font-size:40px;margin-bottom:16px">📊</div>
+    <h2>Registru Analytics</h2>
+    <p>Conectează-te cu contul Google pentru a vizualiza statisticile din Registrul Email 43/2026.</p>
+    <button class="tb-btn accent" style="font-size:13px;padding:11px 28px;border-radius:8px" onclick="doAuth()">
+      Conectează Google Sheets
+    </button>
+    <p class="hint">Același cont ca dashboard-ul Email principal</p>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main hidden" id="mainDash">
+
+  <!-- FILTER BAR -->
+  <div class="filter-bar">
+    <span class="filter-label">Perioadă</span>
+    <select class="filter-select" id="filterPeriod" onchange="applyFilters()">
+      <option value="30">Ultimele 30 zile</option>
+      <option value="60">Ultimele 60 zile</option>
+      <option value="90">Ultimele 90 zile</option>
+      <option value="0">Tot anul 2026</option>
+    </select>
+    <span class="filter-label" style="margin-left:8px">Operator</span>
+    <select class="filter-select" id="filterOperator" onchange="applyFilters()">
+      <option value="">Toți</option>
+    </select>
+    <span class="filter-count" id="filterMeta">—</span>
+  </div>
+
+  <!-- KPI -->
+  <div class="kpi-row">
+    <div class="kpi-card k-blue">
+      <div class="kpi-header">
+        <span class="kpi-label">Total înregistrări</span>
+        <span class="kpi-icon">📋</span>
+      </div>
+      <div class="kpi-value" id="kpiTotal">—</div>
+      <div class="kpi-footer">
+        <span class="kpi-sub" id="kpiTotalSub">se calculează...</span>
+      </div>
+    </div>
+    <div class="kpi-card k-green">
+      <div class="kpi-header">
+        <span class="kpi-label">Înregistrări azi</span>
+        <span class="kpi-icon">📅</span>
+      </div>
+      <div class="kpi-value" id="kpiAzi">—</div>
+      <div class="kpi-footer">
+        <span class="kpi-sub" id="kpiAziSub">—</span>
+      </div>
+    </div>
+    <div class="kpi-card k-amber">
+      <div class="kpi-header">
+        <span class="kpi-label">Email-uri trimise</span>
+        <span class="kpi-icon">✉️</span>
+      </div>
+      <div class="kpi-value" id="kpiTrimise">—</div>
+      <div class="kpi-footer">
+        <span class="kpi-sub" id="kpiTrimiseSub">—</span>
+        <span class="trend flat" id="kpiTrimiseTrend"></span>
+      </div>
+    </div>
+    <div class="kpi-card k-red">
+      <div class="kpi-header">
+        <span class="kpi-label">Fără email</span>
+        <span class="kpi-icon">⚠️</span>
+      </div>
+      <div class="kpi-value" id="kpiFara">—</div>
+      <div class="kpi-footer">
+        <span class="kpi-sub">col Q gol</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW 1 -->
+  <div class="charts-grid">
+    <div class="chart-card" style="animation-delay:.1s">
+      <div class="chart-hdr">
+        <div class="chart-title">
+          <span class="chart-dot" style="background:var(--blue);box-shadow:0 0 6px var(--blue)"></span>
+          Înregistrări pe zi
+        </div>
+        <span class="chart-meta" id="lineChartMeta">ultimele 30 zile</span>
+      </div>
+      <div class="chart-wrap" style="height:230px"><canvas id="chartLine"></canvas></div>
+    </div>
+    <div class="chart-card" style="animation-delay:.15s">
+      <div class="chart-hdr">
+        <div class="chart-title">
+          <span class="chart-dot" style="background:var(--purple);box-shadow:0 0 6px var(--purple)"></span>
+          Tip document — top 10
+        </div>
+        <span class="chart-meta" id="pieChartMeta"></span>
+      </div>
+      <div class="chart-wrap" style="height:230px"><canvas id="chartPie"></canvas></div>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW 2 -->
+  <div class="charts-row2">
+    <div class="chart-card" style="animation-delay:.2s">
+      <div class="chart-hdr">
+        <div class="chart-title">
+          <span class="chart-dot" style="background:var(--cyan);box-shadow:0 0 6px var(--cyan)"></span>
+          Pe operator
+        </div>
+        <span class="chart-meta" id="opChartMeta"></span>
+      </div>
+      <div class="chart-wrap" style="height:210px"><canvas id="chartOperator"></canvas></div>
+    </div>
+    <div class="chart-card" style="animation-delay:.25s">
+      <div class="chart-hdr">
+        <div class="chart-title">
+          <span class="chart-dot" style="background:var(--teal);box-shadow:0 0 6px var(--teal)"></span>
+          Distribuție sector
+        </div>
+        <span class="chart-meta">sectoare 1–6</span>
+      </div>
+      <div class="chart-wrap" style="height:210px"><canvas id="chartSector"></canvas></div>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-card">
+    <div class="table-hdr">
+      <h3>Ultimele înregistrări</h3>
+      <span class="table-meta" id="tableCount">—</span>
+    </div>
+    <div id="tableWrap"></div>
+  </div>
+
+</div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────
+const SHEETS_ID  = '1xFTA80PFIlByy29dBTNfcgeJn9FOXmeEOLCi18Gy6hs';
+const SHEET_NAME = 'Registru E mail 43 2026';
+const SHEETS_BASE= 'https://sheets.googleapis.com/v4/spreadsheets';
+const SCOPES     = 'https://www.googleapis.com/auth/spreadsheets.readonly';
+
+const COL = {DATA:4,IND:6,NUME:7,PREN:8,CONT:11,CNP:12,SECT:13,OP:14,EMAIL:16,STATUS:22};
+
+let TOKEN='', TOKEN_EXP=0, tokenClient=null;
+let allRows=[], filteredRows=[];
+
+// ── CHART.JS DEFAULTS ─────────────────────────────────────
+Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+Chart.defaults.font.size   = 11;
+Chart.defaults.color       = '#64748b';
+
+const PALETTE = [
+  '#3b82f6','#06b6d4','#10b981','#f59e0b','#8b5cf6',
+  '#ec4899','#14b8a6','#f97316','#6366f1','#84cc16'
+];
+
+// ── HELPERS ───────────────────────────────────────────────
+const $  = id => document.getElementById(id);
+const show = id => { const el=$( id); if(el) el.classList.remove('hidden'); };
+const hide = id => { const el=$(id); if(el) el.classList.add('hidden'); };
+const esc  = s  => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+function fmtDate(d) {
+  return `${d.getDate()}.${d.getMonth()+1}.${d.getFullYear()}`;
+}
+
+function parseDate(s) {
+  if(!s) return null;
+  const p = s.trim().split('.');
+  if(p.length===3){
+    const d=parseInt(p[0]),m=parseInt(p[1]),y=parseInt(p[2]);
+    if(!isNaN(d)&&!isNaN(m)&&!isNaN(y)) return new Date(y,m-1,d);
+  }
+  return null;
+}
+
+function destroyChart(id) {
+  const c = Chart.getChart(id);
+  if(c) c.destroy();
+}
+
+function setStatus(state, txt) {
+  const dot=$('statusDot'), lbl=$('statusTxt');
+  dot.className='status-dot '+(state==='ok'?'ok':state==='loading'?'loading':'err');
+  lbl.textContent = txt;
+}
+
+// ── COUNTER ANIMATION ─────────────────────────────────────
+function animateCount(el, target) {
+  const dur = 800, start = Date.now(), from = parseInt(el.textContent)||0;
+  const step = () => {
+    const p = Math.min((Date.now()-start)/dur, 1);
+    const ease = 1-Math.pow(1-p,3);
+    el.textContent = Math.round(from + (target-from)*ease).toLocaleString('ro');
+    if(p<1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+// ── AUTH ──────────────────────────────────────────────────
+function gsiReady() {
+  const cid = localStorage.getItem('gClientId') || localStorage.getItem('clientId');
+  if(!cid){ setStatus('err','Lipsă Client ID în localStorage'); show('authScreen'); show('btnAuth'); return; }
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: cid,
+    scope: SCOPES,
+    callback: r => {
+      if(r.error){ setStatus('err','Auth eșuat'); return; }
+      TOKEN     = r.access_token;
+      TOKEN_EXP = Date.now() + r.expires_in*1000;
+      localStorage.setItem('gToken',    TOKEN);
+      localStorage.setItem('gTokenExp', TOKEN_EXP);
+      hide('authScreen'); hide('btnAuth');
+      show('mainDash'); loadData();
+    }
+  });
+  const saved   = localStorage.getItem('gToken');
+  const savedExp= parseInt(localStorage.getItem('gTokenExp')||0);
+  if(saved && Date.now() < savedExp - 60000) {
+    TOKEN=saved; TOKEN_EXP=savedExp;
+    hide('authScreen'); show('mainDash'); loadData();
+  } else {
+    show('btnAuth'); show('authScreen');
+  }
+}
+
+function doAuth() { tokenClient.requestAccessToken({prompt:''}); }
+
+async function ensureToken() {
+  if(TOKEN && Date.now() < TOKEN_EXP - 60000) return;
+  await new Promise(res => {
+    tokenClient.callback = r => {
+      TOKEN=r.access_token; TOKEN_EXP=Date.now()+r.expires_in*1000; res();
+    };
+    tokenClient.requestAccessToken({prompt:''});
+  });
+}
+
+async function api(url) {
+  await ensureToken();
+  const r = await fetch(url, {headers:{Authorization:'Bearer '+TOKEN}});
+  if(!r.ok) throw new Error(`${r.status}: ${await r.text()}`);
+  return r.json();
+}
+
+// ── LOAD DATA ─────────────────────────────────────────────
+async function loadData() {
+  setStatus('loading','Se încarcă...');
+  try {
+    const range = encodeURIComponent(`'${SHEET_NAME}'!A:W`);
+    const data  = await api(`${SHEETS_BASE}/${SHEETS_ID}/values/${range}`);
+    const rows  = (data.values||[]).slice(1);
+    allRows = rows.filter(r =>
+      (r[COL.IND]||'').match(/R43\/\d+/) ||
+      (r[COL.DATA]||'').match(/\d+\.\d+\.\d+/)
+    );
+    populateOperatorFilter();
+    applyFilters();
+    const now = new Date();
+    setStatus('ok', `${allRows.length} rânduri · ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`);
+    $('btnAutoRefresh').style.display='';
+    $('countdownPill').classList.remove('hidden');
+    if(_arActive){ _arCountdown=AUTO_REFRESH_SEC; _tickCd(); }
+    else if(!_arInterval){ startAutoRefresh(); }
+  } catch(e) {
+    setStatus('err','✕ '+e.message.slice(0,60));
+  }
+}
+
+function refreshData(){ loadData(); }
+
+// ── AUTO-REFRESH ──────────────────────────────────────────
+const AUTO_REFRESH_SEC = 60;
+let _arInterval=null, _arCountdown=0, _arActive=false;
+
+function startAutoRefresh(){
+  _arActive=true; _arCountdown=AUTO_REFRESH_SEC;
+  $('btnAutoRefresh').textContent='⏸ Auto';
+  _tickCd();
+  _arInterval = setInterval(()=>{
+    if(--_arCountdown<=0){ _arCountdown=AUTO_REFRESH_SEC; loadData(); }
+    _tickCd();
+  },1000);
+}
+function stopAutoRefresh(){
+  _arActive=false; clearInterval(_arInterval); _arInterval=null;
+  $('btnAutoRefresh').textContent='▶ Auto';
+  $('countdownPill').textContent='';
+}
+function toggleAutoRefresh(){ _arActive ? stopAutoRefresh() : startAutoRefresh(); }
+function _tickCd(){
+  $('countdownPill').textContent = _arActive ? `↻ ${_arCountdown}s` : '';
+}
+
+// ── FILTERS ───────────────────────────────────────────────
+function populateOperatorFilter(){
+  const ops=[...new Set(allRows.map(r=>r[COL.OP]||'').filter(Boolean))].sort();
+  const sel=$('filterOperator');
+  sel.innerHTML='<option value="">Toți</option>'+
+    ops.map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join('');
+}
+
+function applyFilters(){
+  const days   = parseInt($('filterPeriod').value)||0;
+  const opFilt = $('filterOperator').value;
+  const cutoff = days>0 ? new Date(Date.now()-days*864e5) : new Date(2026,0,1);
+  filteredRows = allRows.filter(r=>{
+    const d=parseDate(r[COL.DATA]);
+    if(days>0 && d && d<cutoff) return false;
+    if(opFilt && (r[COL.OP]||'').trim()!==opFilt) return false;
+    return true;
+  });
+  const n=$('filterPeriod').value;
+  $('lineChartMeta').textContent = n==='0'?'tot 2026':`ultimele ${n} zile`;
+  $('filterMeta').textContent = `${filteredRows.length} înregistrări`;
+  renderAll();
+}
+
+// ── RENDER ────────────────────────────────────────────────
+function renderAll(){
+  renderKPIs();
+  renderLineChart();
+  renderPieChart();
+  renderOperatorChart();
+  renderSectorChart();
+  renderTable();
+}
+
+function renderKPIs(){
+  const today   = fmtDate(new Date());
+  const total   = filteredRows.length;
+  const azi     = filteredRows.filter(r=>(r[COL.DATA]||'').trim()===today).length;
+  const trimise = filteredRows.filter(r=>(r[COL.STATUS]||'').trim()==='Trimis').length;
+  const fara    = filteredRows.filter(r=>!(r[COL.EMAIL]||'').trim()).length;
+  const pct     = Math.round(trimise/Math.max(total,1)*100);
+
+  animateCount($('kpiTotal'),   total);
+  animateCount($('kpiAzi'),     azi);
+  animateCount($('kpiTrimise'), trimise);
+  animateCount($('kpiFara'),    fara);
+
+  $('kpiTotalSub').textContent  = `din ${allRows.length.toLocaleString('ro')} total 2026`;
+  $('kpiAziSub').textContent    = today;
+  $('kpiTrimiseSub').textContent= `${pct}% din perioadă`;
+  const tr=$('kpiTrimiseTrend');
+  tr.textContent=pct>80?'▲ bun':pct>50?'→ mediu':'▼ scăzut';
+  tr.className='trend '+(pct>80?'up':pct>50?'flat':'down');
+}
+
+function renderLineChart(){
+  const days = parseInt($('filterPeriod').value)||30;
+  const n    = days>0 ? days : 120;
+  const map  = {};
+  for(let i=n-1;i>=0;i--){
+    const d=new Date(Date.now()-i*864e5); map[fmtDate(d)]=0;
+  }
+  filteredRows.forEach(r=>{ const k=(r[COL.DATA]||'').trim(); if(map.hasOwnProperty(k)) map[k]++; });
+  const labels=Object.keys(map).map(k=>{const p=k.split('.');return `${p[0]}.${p[1]}`;});
+  const values=Object.values(map);
+  destroyChart('chartLine');
+  const ctx=document.getElementById('chartLine').getContext('2d');
+  const grad=ctx.createLinearGradient(0,0,0,220);
+  grad.addColorStop(0,'rgba(59,130,246,.35)');
+  grad.addColorStop(1,'rgba(59,130,246,.01)');
+  new Chart(ctx,{
+    type:'line',
+    data:{
+      labels,
+      datasets:[{
+        label:'Înregistrări',data:values,
+        borderColor:'#3b82f6',backgroundColor:grad,
+        borderWidth:2,pointRadius:2,pointHoverRadius:5,
+        pointBackgroundColor:'#3b82f6',fill:true,tension:.4
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      animation:{duration:800,easing:'easeOutQuart'},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'#1e293b',padding:10,cornerRadius:8,
+          borderColor:'rgba(255,255,255,.1)',borderWidth:1,
+          titleFont:{family:"'DM Mono'",size:11},
+          bodyFont:{family:"'DM Mono'",size:11}
+        }
+      },
+      scales:{
+        x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{maxRotation:0,maxTicksLimit:12,font:{size:10},color:'#475569'}},
+        y:{grid:{color:'rgba(255,255,255,.04)'},beginAtZero:true,ticks:{precision:0,font:{size:10},color:'#475569'}}
+      }
+    }
+  });
+}
+
+function renderPieChart(){
+  const counts={};
+  filteredRows.forEach(r=>{
+    (r[COL.CONT]||'').split(',').forEach(t=>{ const k=t.trim(); if(k) counts[k]=(counts[k]||0)+1; });
+  });
+  const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  $('pieChartMeta').textContent=`${sorted.length} tipuri`;
+  destroyChart('chartPie');
+  new Chart(document.getElementById('chartPie'),{
+    type:'doughnut',
+    data:{
+      labels:sorted.map(x=>x[0]),
+      datasets:[{
+        data:sorted.map(x=>x[1]),
+        backgroundColor:PALETTE,
+        borderWidth:2,borderColor:'#13131f',
+        hoverBorderColor:'rgba(255,255,255,.3)'
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      animation:{duration:900,easing:'easeOutQuart'},
+      cutout:'62%',
+      plugins:{
+        legend:{
+          position:'right',
+          labels:{font:{size:10,family:"'Plus Jakarta Sans'"},boxWidth:10,padding:10,color:'#94a3b8'}
+        },
+        tooltip:{
+          backgroundColor:'#1e293b',padding:10,cornerRadius:8,
+          borderColor:'rgba(255,255,255,.1)',borderWidth:1,
+          titleFont:{family:"'DM Mono'",size:11},bodyFont:{family:"'DM Mono'",size:11}
+        }
+      }
+    }
+  });
+}
+
+function renderOperatorChart(){
+  const counts={};
+  filteredRows.forEach(r=>{ const k=(r[COL.OP]||'—').trim(); counts[k]=(counts[k]||0)+1; });
+  const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,12);
+  $('opChartMeta').textContent=`${sorted.length} operatori`;
+  destroyChart('chartOperator');
+  new Chart(document.getElementById('chartOperator'),{
+    type:'bar',
+    data:{
+      labels:sorted.map(x=>x[0]),
+      datasets:[{
+        label:'Înregistrări',data:sorted.map(x=>x[1]),
+        backgroundColor:sorted.map((_,i)=>PALETTE[i%PALETTE.length]+'bb'),
+        borderColor:sorted.map((_,i)=>PALETTE[i%PALETTE.length]),
+        borderWidth:1,borderRadius:6,borderSkipped:false
+      }]
+    },
+    options:{
+      indexAxis:'y',
+      responsive:true,maintainAspectRatio:false,
+      animation:{duration:800,easing:'easeOutQuart'},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'#1e293b',padding:10,cornerRadius:8,
+          borderColor:'rgba(255,255,255,.1)',borderWidth:1,
+          titleFont:{family:"'DM Mono'",size:11},bodyFont:{family:"'DM Mono'",size:11}
+        }
+      },
+      scales:{
+        x:{grid:{color:'rgba(255,255,255,.04)'},beginAtZero:true,ticks:{precision:0,font:{size:10},color:'#475569'}},
+        y:{grid:{display:false},ticks:{font:{size:10},color:'#94a3b8'}}
+      }
+    }
+  });
+}
+
+function renderSectorChart(){
+  const counts={'1':0,'2':0,'3':0,'4':0,'5':0,'6':0};
+  filteredRows.forEach(r=>{ const k=(r[COL.SECT]||'').trim(); if(counts.hasOwnProperty(k)) counts[k]++; });
+  const colors=['#3b82f6','#10b981','#f59e0b','#8b5cf6','#06b6d4','#ef4444'];
+  destroyChart('chartSector');
+  new Chart(document.getElementById('chartSector'),{
+    type:'bar',
+    data:{
+      labels:Object.keys(counts).map(k=>'Sector '+k),
+      datasets:[{
+        label:'Înregistrări',data:Object.values(counts),
+        backgroundColor:colors.map(c=>c+'99'),
+        borderColor:colors,borderWidth:1,
+        borderRadius:6,borderSkipped:false
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      animation:{duration:800,easing:'easeOutQuart'},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'#1e293b',padding:10,cornerRadius:8,
+          borderColor:'rgba(255,255,255,.1)',borderWidth:1,
+          titleFont:{family:"'DM Mono'",size:11},bodyFont:{family:"'DM Mono'",size:11}
+        }
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:10},color:'#94a3b8'}},
+        y:{grid:{color:'rgba(255,255,255,.04)'},beginAtZero:true,ticks:{precision:0,font:{size:10},color:'#475569'}}
+      }
+    }
+  });
+}
+
+function renderTable(){
+  const rows=[...filteredRows].reverse().slice(0,30);
+  $('tableCount').textContent=`ultimele ${rows.length} din ${filteredRows.length.toLocaleString('ro')}`;
+  const html=`<table>
+    <thead><tr>
+      <th>Indicativ</th><th>Beneficiar</th><th>Data</th>
+      <th>Tip document</th><th>Operator</th><th>Sector</th><th>Status</th>
+    </tr></thead>
+    <tbody>${rows.map(r=>{
+      const status=(r[COL.STATUS]||'').trim();
+      const bc=status==='Trimis'?'badge-green':status?'badge-amber':'badge-gray';
+      const cont=(r[COL.CONT]||'—');
+      const shortCont=cont.length>35?cont.slice(0,35)+'…':cont;
+      return `<tr>
+        <td class="mono bold">${esc(r[COL.IND]||'—')}</td>
+        <td class="bold">${esc(r[COL.NUME]||'')} ${esc(r[COL.PREN]||'')}</td>
+        <td class="mono">${esc(r[COL.DATA]||'—')}</td>
+        <td title="${esc(cont)}">${esc(shortCont)}</td>
+        <td>${esc(r[COL.OP]||'—')}</td>
+        <td>${esc(r[COL.SECT]||'—')}</td>
+        <td><span class="badge ${bc}">${esc(status||'—')}</span></td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+  $('tableWrap').innerHTML=html;
+}
+</script>
+</body>
+</html>
