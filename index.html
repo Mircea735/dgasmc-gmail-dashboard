@@ -1951,15 +1951,18 @@ function ocrCnpEdited(el) {
   // Debounced re-search when user edits CNP field
   clearTimeout(el._t);
   el._t = setTimeout(() => {
-    const cnp = el.textContent.trim();
+    const cnp = (el.innerText !== undefined ? el.innerText : el.textContent).replace(/[\s\u00a0\u200b]/g, '');
     if (cnp.length >= 6 && _sqlAllRows.length) _ocrSearchTable(cnp);
   }, 500);
 }
 
 function ocrSearchCnpBtn(btn) {
-  // Find CNP value from sibling contenteditable div
+  // Extrage CNP din câmpul contenteditable — innerText e mai fiabil după editare
   const field = btn.closest('.ocr-field');
-  const val = field ? (field.querySelector('[data-key="CNP"]')?.textContent||'').trim() : '';
+  const el = field ? field.querySelector('[data-key="CNP"]') : null;
+  // innerText respectă whitespace vizibil; fallback pe textContent; replace whitespace
+  const raw = el ? (el.innerText !== undefined ? el.innerText : el.textContent) : '';
+  const val = raw.replace(/[\s\u00a0\u200b]/g, ''); // elimină orice whitespace și caractere invizibile
   if (!val) { alert('Câmpul CNP este gol.'); return; }
   if (!_sqlAllRows.length) { alert('Niciun tabel Excel/SQL încărcat.\nImportă un fișier Excel mai întâi.'); return; }
   _ocrSearchTable(val);
