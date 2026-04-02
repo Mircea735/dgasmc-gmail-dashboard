@@ -565,6 +565,7 @@ body.sql-panel-open .main{height:calc(var(--sql-panel-h, 46vh) * -1 + 100vh - 48
       <button class="tb-btn" onclick="composeNew()" title="Email nou" style="background:rgba(34,197,94,.08);border-color:#22c55e;color:#22c55e">✉ Email nou</button>
       <button class="tb-btn" onclick="showRegistruViewer()" title="Vizualizează Registrul R43/2026" style="background:rgba(37,99,235,.1);border-color:var(--accent);color:var(--accent)">📊 Registru</button>
       <button class="tb-btn" onclick="showSqlViewer()" title="Situație beneficiari SQL Server" style="background:rgba(15,118,110,.1);border-color:var(--teal);color:var(--teal)">🗄 SQL</button>
+      <button id="xlsLoadedBadge" onclick="showSqlViewer()" title="Date Excel încărcate — click pentru vizualizare" style="display:none;background:rgba(15,118,110,.12);border-color:var(--teal);color:var(--teal);font-size:11px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" class="tb-btn"></button>
       <button class="tb-btn" onclick="showRaportModal()" title="Generator Rapoarte Juridice" style="background:rgba(168,85,247,.1);border-color:#a855f7;color:#a855f7">⚖ Raport</button>
       <a href="/bi" target="_blank" class="tb-btn" title="Analytics Dashboard" style="background:rgba(6,182,212,.1);border-color:#06b6d4;color:#06b6d4;text-decoration:none">📈 Analytics</a>
       <button class="tb-btn" onclick="resetSetup()" title="Setări">⚙</button>
@@ -3233,6 +3234,8 @@ function _sqlQuery() {
   return `SELECT * FROM ${safe.includes(' ')||safe.includes('[') ? safe : '['+safe+']'}` + (where ? ` WHERE ${where}` : '');
 }
 
+let _sqlRendered = false; // true dacă renderSqlTable a fost apelat cel puțin o dată
+
 function showSqlViewer() {
   document.getElementById('sqlModal').classList.remove('hidden');
   document.body.classList.add('sql-panel-open');
@@ -3241,6 +3244,10 @@ function showSqlViewer() {
   ['sqlServer','sqlDatabase','sqlUser','sqlViewName','sqlWhere'].forEach(k=>{
     const el=document.getElementById(k); if(el) el.value=localStorage.getItem(k)||'';
   });
+  // Lazy render: dacă avem date Excel dar nu am randat încă, randează acum
+  if (_sqlAllRows.length > 0 && !_sqlRendered) {
+    renderSqlTable(_sqlAllRows);
+  }
   // Don't restore password to input for security
   const conn=_sqlConn(), q=_sqlQuery();
   if (conn && q && _sqlAllRows.length === 0) loadSqlData();
@@ -4021,6 +4028,7 @@ const SQL_PAGE = 300; // rânduri per pagină
 let _sqlRenderOffset = 0;
 
 function renderSqlTable(rows, offset) {
+  _sqlRendered = true;
   _sqlRenderOffset = offset || 0;
   if (!rows.length) {
     document.getElementById('sqlBody').innerHTML = '<div class="load-row" style="padding:60px;color:var(--text3)">Nicio înregistrare găsită</div>';
@@ -4188,15 +4196,17 @@ function importExcelFile(input) {
         }
       }
 
-      // UI updates
+      // UI updates — date în memorie, panoul NU se deschide automat
+      _sqlRendered = false;
       _setSrcBadge('excel', file.name, wb.SheetNames[0]);
-      renderSqlTable(_sqlAllRows);
+      _updateXlsBadge(file.name);
       document.getElementById('sqlCount').textContent = `${_sqlAllRows.length} rânduri`;
       document.getElementById('sqlFooterInfo').textContent = `${_sqlAllRows.length} rânduri · ${wb.SheetNames[0]} · ${file.name}`;
       const now = new Date();
       document.getElementById('sqlLastLoad').textContent = `Importat: ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
       document.getElementById('btnSumar').style.display = '';
       document.getElementById('btnSqlTable').style.display = 'none';
+      document.getElementById('sqlBody').innerHTML = ''; // curăță spinner-ul
     } catch(err) {
       document.getElementById('sqlBody').innerHTML = `<div class="load-row" style="color:var(--red);padding:40px;flex-direction:column;gap:8px"><div>✕ Eroare import Excel</div><div style="font-size:11px;font-family:var(--mono)">${esc(err.message)}</div></div>`;
     }
@@ -4270,10 +4280,15 @@ function _applyPromoteHeader() {
 
 function promoteFirstRowAsHeader() {
   _applyPromoteHeader();
+  _sqlRendered = false; // forțează re-render la deschidere panel
   document.getElementById('btnPromoteHeader').style.display = 'none';
-  renderSqlTable(_sqlAllRows);
   document.getElementById('sqlCount').textContent = `${_sqlAllRows.length} rânduri`;
   document.getElementById('btnSumar').style.display = _sqlAllRows.length ? '' : 'none'; document.getElementById('btnAq').style.display = _sqlAllRows.length ? '' : 'none';
+  _updateXlsBadge(_xlsFilename); // actualizează badge cu nr. rânduri după promote
+  // Dacă panoul e deja deschis, re-randează imediat
+  if (!document.getElementById('sqlModal').classList.contains('hidden')) {
+    renderSqlTable(_sqlAllRows);
+  }
 }
 
 function _showHeaderPromotedNotice(reason) {
@@ -4296,6 +4311,16 @@ function _setSrcBadge(type, filename, sheet) {
     b.textContent = '🗄 SQL Server';
     b.title = 'Sursă: SQL Server';
   }
+}
+
+function _updateXlsBadge(filename) {
+  const b = document.getElementById('xlsLoadedBadge');
+  if (!b) return;
+  if (!filename || !_sqlAllRows.length) { b.style.display = 'none'; return; }
+  const short = filename.length > 22 ? filename.slice(0, 20) + '…' : filename;
+  b.textContent = `📂 ${short} · ${_sqlAllRows.length.toLocaleString('ro-RO')} rânduri`;
+  b.title = `${filename} · ${_sqlAllRows.length} rânduri încărcate — click pentru vizualizare`;
+  b.style.display = '';
 }
 
 // ── Sumar per beneficiar ──────────────────────────────────
