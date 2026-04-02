@@ -3334,9 +3334,8 @@ function renderSqlTable(rows) {
       const v  = row[c];
       const vs = (v === null || v === undefined) ? '' : String(v).trim();
       if (_looksLikeEmail(vs)) {
-        const nameJs  = JSON.stringify(displayName);
-        const emailJs = JSON.stringify(vs);
-        html += `<td title="${esc(vs)}"><button onclick="sqlComposeEmail(${emailJs},${nameJs})"
+        html += `<td title="${esc(vs)}"><button onclick="sqlComposeEmailBtn(this)"
+          data-email="${esc(vs)}" data-name="${esc(displayName)}"
           class="sql-email-btn" title="Compune email către ${esc(vs)}">✉ ${esc(vs)}</button></td>`;
       } else {
         html += `<td title="${esc(vs)}">${esc(vs||'—')}</td>`;
@@ -3347,6 +3346,10 @@ function renderSqlTable(rows) {
 
   html += '</tbody></table>';
   document.getElementById('sqlBody').innerHTML = html;
+}
+
+function sqlComposeEmailBtn(btn) {
+  sqlComposeEmail(btn.dataset.email, btn.dataset.name);
 }
 
 function sqlComposeEmail(emailAddr, displayName) {
