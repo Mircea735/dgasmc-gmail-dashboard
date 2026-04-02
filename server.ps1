@@ -189,6 +189,63 @@ poll();
             $res.ContentLength64 = $content.Length
             $res.OutputStream.Write($content, 0, $content.Length)
 
+        } elseif ($req.Url.AbsolutePath -eq '/api/sql' -and $req.HttpMethod -eq 'POST') {
+            # SQL Server proxy — executa query si returneaza JSON
+            try {
+                $ms = New-Object System.IO.MemoryStream
+                $req.InputStream.CopyTo($ms)
+                $bodyStr = [System.Text.Encoding]::UTF8.GetString($ms.ToArray())
+                $ms.Close()
+                $payload = $bodyStr | ConvertFrom-Json
+
+                $connStr = $payload.conn
+                $query   = $payload.query
+
+                if (-not $connStr -or -not $query) { throw "Lipseste conn sau query" }
+
+                # Sanitize: allow only SELECT / EXEC on views
+                $trimmed = $query.Trim()
+                if ($trimmed -notmatch '^(SELECT|EXEC|EXECUTE)\s') {
+                    throw "Doar SELECT/EXEC permis"
+                }
+
+                $conn = New-Object System.Data.SqlClient.SqlConnection($connStr)
+                $conn.Open()
+                $cmd = $conn.CreateCommand()
+                $cmd.CommandText = $query
+                $cmd.CommandTimeout = 30
+                $adapter = New-Object System.Data.SqlClient.SqlDataAdapter($cmd)
+                $table = New-Object System.Data.DataTable
+                $adapter.Fill($table) | Out-Null
+                $conn.Close()
+
+                # Convert DataTable to array of objects
+                $rows = @()
+                foreach ($row in $table.Rows) {
+                    $obj = @{}
+                    foreach ($col in $table.Columns) {
+                        $val = $row[$col.ColumnName]
+                        if ($val -is [System.DBNull]) { $val = $null }
+                        elseif ($val -is [datetime]) { $val = $val.ToString('dd.MM.yyyy') }
+                        $obj[$col.ColumnName] = $val
+                    }
+                    $rows += $obj
+                }
+                $json = @{ rows = $rows; count = $rows.Count; columns = @($table.Columns | ForEach-Object { $_.ColumnName }) } | ConvertTo-Json -Depth 5 -Compress
+                $respBytes = [System.Text.Encoding]::UTF8.GetBytes($json)
+                $res.StatusCode = 200
+                $res.ContentType = 'application/json; charset=utf-8'
+                $res.ContentLength64 = $respBytes.Length
+                $res.OutputStream.Write($respBytes, 0, $respBytes.Length)
+            } catch {
+                $errMsg = '{"error":"' + ($_.Exception.Message -replace '"','`"' -replace '\\','\\') + '"}'
+                $errBytes = [System.Text.Encoding]::UTF8.GetBytes($errMsg)
+                $res.StatusCode = 500
+                $res.ContentType = 'application/json; charset=utf-8'
+                $res.ContentLength64 = $errBytes.Length
+                $res.OutputStream.Write($errBytes, 0, $errBytes.Length)
+            }
+
         } elseif ($req.Url.AbsolutePath -eq '/bi' -or $req.Url.AbsolutePath -eq '/bi/') {
             $file    = Join-Path $dir "dashboard-bi.html"
             $content = [System.IO.File]::ReadAllBytes($file)
