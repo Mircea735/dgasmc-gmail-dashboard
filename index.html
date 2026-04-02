@@ -360,6 +360,26 @@ button,input,select,textarea{font-family:var(--sans);}
 .sql-set-field input{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:12px;padding:5px 9px;border-radius:4px;outline:none;font-family:var(--mono);}
 .sql-set-field input:focus{border-color:var(--teal);}
 .sql-set-field.full{grid-column:1/-1;}
+/* Excel source badge */
+.sql-src-badge{font-size:10px;padding:2px 7px;border-radius:3px;font-weight:700;}
+.sql-src-badge.xl{background:rgba(34,197,94,.15);color:var(--green);}
+.sql-src-badge.db{background:rgba(15,118,110,.15);color:var(--teal);}
+/* Sumar panel */
+.sql-sumar-panel{display:flex;flex-direction:column;gap:0;overflow:hidden;}
+.sql-sumar-toolbar{display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--surface2);flex-shrink:0;flex-wrap:wrap;}
+.sql-sumar-toolbar label{font-size:11px;color:var(--text3);}
+.sql-sumar-toolbar select{background:var(--surface3);border:1px solid var(--border);color:var(--text);font-size:12px;padding:3px 7px;border-radius:4px;outline:none;}
+.sql-sumar-toolbar select:focus{border-color:var(--teal);}
+.sumar-cards{display:flex;flex-wrap:wrap;gap:10px;padding:14px;overflow-y:auto;flex:1;}
+.sumar-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;min-width:260px;max-width:340px;flex:1;cursor:pointer;transition:border-color .15s;}
+.sumar-card:hover{border-color:var(--teal);}
+.sumar-card.expanded{border-color:var(--teal);background:rgba(15,118,110,.05);}
+.sc-key{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;}
+.sc-count{font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:6px;}
+.sc-rows{display:flex;flex-direction:column;gap:3px;margin-top:6px;border-top:1px solid var(--border);padding-top:6px;}
+.sc-row{display:grid;gap:4px;font-size:11px;}
+.sc-row-lbl{color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sc-row-val{color:var(--text2);font-family:var(--mono);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
 /* ── SPINNER / MISC ── */
 .spinner{display:inline-block;width:13px;height:13px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;}
@@ -638,6 +658,7 @@ button,input,select,textarea{font-family:var(--sans);}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" onload="gsiReady()" async></script>
 <script>
 // ══════════════════════════════════════════════════════════
@@ -3054,11 +3075,14 @@ async function loadSqlData() {
 
     _sqlAllRows = data.rows || [];
     _sqlColumns = data.columns || [];
-    _sqlSortCol = '';
+    _sqlSortCol = ''; _sqlSource = 'db'; _sqlViewMode = 'table';
 
     renderSqlTable(_sqlAllRows);
+    _setSrcBadge('db');
     document.getElementById('sqlCount').textContent = `${_sqlAllRows.length} înregistrări`;
     document.getElementById('sqlFooterInfo').textContent = `${_sqlAllRows.length} beneficiari · view: ${localStorage.getItem('sqlViewName')||''}`;
+    document.getElementById('btnSumar').style.display = _sqlAllRows.length ? '' : 'none';
+    document.getElementById('btnSqlTable').style.display = 'none';
     const now = new Date();
     document.getElementById('sqlLastLoad').textContent = `Actualizat: ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
     if(st) { st.textContent='✓ Conectat'; st.style.color='var(--green)'; }
@@ -3122,6 +3146,170 @@ function sortSqlBy(col) {
   renderSqlTable(rows);
 }
 
+// ── Excel import ──────────────────────────────────────────
+let _sqlSource = 'db'; // 'db' | 'excel'
+let _xlsFilename = '';
+let _sumarGroupCol = '';
+let _sumarExpandedKey = null;
+let _sqlViewMode = 'table'; // 'table' | 'sumar'
+
+function importExcelFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  _xlsFilename = file.name;
+  input.value = '';
+
+  document.getElementById('sqlBody').innerHTML = '<div class="load-row" style="padding:60px"><div class="spinner"></div> Se procesează Excel...</div>';
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      if (typeof XLSX === 'undefined') throw new Error('SheetJS nu s-a încărcat. Verifică conexiunea la internet.');
+      const wb = XLSX.read(e.target.result, {type:'array', cellDates:true, dateNF:'dd.mm.yyyy'});
+      // Use first sheet
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json(ws, {defval: null, raw: false});
+      if (!raw.length) throw new Error('Foaia Excel este goală sau nu are date recunoscute.');
+
+      _sqlAllRows = raw;
+      _sqlColumns = Object.keys(raw[0]);
+      _sqlSortCol = ''; _sqlSortAsc = true;
+      _sqlSource = 'excel';
+      _sqlViewMode = 'table';
+
+      // UI updates
+      _setSrcBadge('excel', file.name, wb.SheetNames[0]);
+      renderSqlTable(_sqlAllRows);
+      document.getElementById('sqlCount').textContent = `${raw.length} rânduri`;
+      document.getElementById('sqlFooterInfo').textContent = `${raw.length} rânduri · ${wb.SheetNames[0]} · ${file.name}`;
+      const now = new Date();
+      document.getElementById('sqlLastLoad').textContent = `Importat: ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+      document.getElementById('btnSumar').style.display = '';
+      document.getElementById('btnSqlTable').style.display = 'none';
+    } catch(err) {
+      document.getElementById('sqlBody').innerHTML = `<div class="load-row" style="color:var(--red);padding:40px;flex-direction:column;gap:8px"><div>✕ Eroare import Excel</div><div style="font-size:11px;font-family:var(--mono)">${esc(err.message)}</div></div>`;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function _setSrcBadge(type, filename, sheet) {
+  const b = document.getElementById('sqlSrcBadge');
+  b.style.display = '';
+  if (type === 'excel') {
+    b.className = 'sql-src-badge xl';
+    b.textContent = `📗 ${filename}${sheet ? ' · ' + sheet : ''}`;
+    b.title = 'Sursă: Excel importat';
+  } else {
+    b.className = 'sql-src-badge db';
+    b.textContent = '🗄 SQL Server';
+    b.title = 'Sursă: SQL Server';
+  }
+}
+
+// ── Sumar per beneficiar ──────────────────────────────────
+function showSumarPanel() {
+  if (!_sqlAllRows.length) return;
+  _sqlViewMode = 'sumar';
+  document.getElementById('btnSumar').style.display = 'none';
+  document.getElementById('btnSqlTable').style.display = '';
+
+  // Detect best group-by column (CNP > Nume > first col)
+  const colsLower = _sqlColumns.map(c=>c.toLowerCase());
+  _sumarGroupCol = _sqlColumns[colsLower.findIndex(c=>c.includes('cnp'))] ||
+                   _sqlColumns[colsLower.findIndex(c=>c.includes('nume'))] ||
+                   _sqlColumns[0];
+  _sumarExpandedKey = null;
+  _renderSumarPanel();
+}
+
+function _renderSumarPanel() {
+  const cols = _sqlColumns;
+  // Build column selector
+  const colOpts = cols.map(c=>`<option value="${esc(c)}" ${c===_sumarGroupCol?'selected':''}>${esc(c)}</option>`).join('');
+
+  // Group rows
+  const groups = {};
+  _sqlAllRows.forEach(row => {
+    const key = String(row[_sumarGroupCol]??'—');
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(row);
+  });
+
+  const sortedKeys = Object.keys(groups).sort((a,b)=>a.localeCompare(b,'ro'));
+
+  // Info cols: all except group key (show up to 8)
+  const infoCols = cols.filter(c=>c!==_sumarGroupCol).slice(0,8);
+
+  let cards = '';
+  sortedKeys.forEach(key => {
+    const rows = groups[key];
+    const isExp = _sumarExpandedKey === key;
+    cards += `<div class="sumar-card ${isExp?'expanded':''}" onclick="toggleSumarCard('${esc(key).replace(/'/g,"\\'")}')">
+      <div class="sc-key">${esc(key)}</div>
+      <div class="sc-count">${rows.length} înregistrare${rows.length!==1?'i':''}</div>`;
+
+    if (isExp) {
+      cards += '<div class="sc-rows">';
+      rows.forEach((row,ri) => {
+        if (rows.length > 1) cards += `<div style="font-size:10px;font-weight:700;color:var(--text3);margin:4px 0 2px">— Rând ${ri+1} —</div>`;
+        infoCols.forEach(c => {
+          const v = row[c];
+          if (v===null||v===undefined||v==='') return;
+          cards += `<div class="sc-row" style="grid-template-columns:120px 1fr">
+            <span class="sc-row-lbl" title="${esc(c)}">${esc(c)}</span>
+            <span class="sc-row-val" title="${esc(String(v))}">${esc(String(v))}</span>
+          </div>`;
+        });
+      });
+      cards += '</div>';
+    }
+    cards += '</div>';
+  });
+
+  document.getElementById('sqlBody').innerHTML = `
+    <div class="sql-sumar-panel" style="height:100%">
+      <div class="sql-sumar-toolbar">
+        <label>Grupează după:</label>
+        <select onchange="changeSumarGroup(this.value)">${colOpts}</select>
+        <span style="font-size:11px;font-family:var(--mono);color:var(--text3)">${sortedKeys.length} beneficiari unici · ${_sqlAllRows.length} total rânduri</span>
+        <input type="text" class="sql-search" style="max-width:200px" placeholder="Filtrează beneficiar..." oninput="filterSumarCards(this.value)" id="sumarSearch">
+      </div>
+      <div class="sumar-cards" id="sumarCards">${cards}</div>
+    </div>`;
+}
+
+function toggleSumarCard(key) {
+  _sumarExpandedKey = _sumarExpandedKey === key ? null : key;
+  _renderSumarPanel();
+  // Restore search
+  const s = document.getElementById('sumarSearch');
+  if (s?.value) filterSumarCards(s.value);
+}
+
+function changeSumarGroup(col) {
+  _sumarGroupCol = col;
+  _sumarExpandedKey = null;
+  _renderSumarPanel();
+}
+
+function filterSumarCards(q) {
+  const cards = document.querySelectorAll('.sumar-card');
+  const ql = q.toLowerCase();
+  cards.forEach(card => {
+    const key = card.querySelector('.sc-key')?.textContent||'';
+    card.style.display = (!ql || key.toLowerCase().includes(ql)) ? '' : 'none';
+  });
+}
+
+function showSqlTableView() {
+  _sqlViewMode = 'table';
+  _sumarExpandedKey = null;
+  document.getElementById('btnSumar').style.display = '';
+  document.getElementById('btnSqlTable').style.display = 'none';
+  renderSqlTable(_sqlAllRows);
+}
+
 function exportSqlCsv() {
   if (!_sqlAllRows.length) return;
   const cols = _sqlColumns;
@@ -3166,8 +3354,15 @@ function showRegConfirmInSidebar(nr, toEmail, emailStatus) {
     <div class="sql-topbar">
       <h3>🗄 Situație Beneficiari · SQL Server</h3>
       <input type="text" class="sql-search" id="sqlSearch" placeholder="Caută nume, CNP, sector..." oninput="filterSqlTable(this.value)">
+      <span id="sqlSrcBadge" class="sql-src-badge" style="display:none"></span>
       <span class="sql-count" id="sqlCount"></span>
-      <button class="tb-btn" onclick="loadSqlData()" id="btnSqlRefresh" style="border-color:var(--teal);color:var(--teal)">↺ Reîncarcă</button>
+      <button class="tb-btn" onclick="loadSqlData()" id="btnSqlRefresh" style="border-color:var(--teal);color:var(--teal)">↺ SQL</button>
+      <label class="tb-btn" style="cursor:pointer;border-color:var(--green);color:var(--green)" title="Importă fișier Excel / CSV">
+        📂 Excel
+        <input type="file" id="sqlXlsInput" accept=".xlsx,.xls,.csv,.ods" style="display:none" onchange="importExcelFile(this)">
+      </label>
+      <button class="tb-btn" onclick="showSumarPanel()" id="btnSumar" style="display:none;border-color:var(--purple);color:var(--purple)">📋 Sumar</button>
+      <button class="tb-btn" onclick="showSqlTableView()" id="btnSqlTable" style="display:none">📄 Tabel</button>
       <button class="tb-btn" onclick="exportSqlCsv()" title="Export CSV">⬇ CSV</button>
       <button class="tb-btn" onclick="toggleSqlSettings()" title="Configurare conexiune SQL" id="btnSqlSettings">⚙ Conexiune</button>
       <button class="tb-btn" onclick="hideSqlViewer()">✕</button>
