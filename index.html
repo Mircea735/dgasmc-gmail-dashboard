@@ -1920,17 +1920,49 @@ const OCR_LABEL_MAP={
 function renderOCRFields(data) {
   // Save persistent copy
   persistOcrData={...data};
-  // Render in attachment sidebar
-  const html=Object.entries(data).map(([k,v])=>`
-    <div class="ocr-field">
+  // Render in attachment sidebar — CNP gets a search button
+  const html=Object.entries(data).map(([k,v])=>{
+    if (k === 'CNP') {
+      return `<div class="ocr-field">
+        <label style="display:flex;align-items:center;justify-content:space-between">
+          <span>${OCR_LABEL_MAP[k]||k}</span>
+          <button onclick="ocrSearchCnpBtn(this)" title="Caută CNP în tabelul Excel/SQL"
+            style="font-size:10px;padding:1px 7px;border-radius:3px;border:1px solid var(--teal);
+                   background:rgba(15,118,110,.1);color:var(--teal);cursor:pointer;line-height:1.4">🔍 Caută</button>
+        </label>
+        <div class="ocr-val" contenteditable="true" data-key="CNP"
+             oninput="ocrCnpEdited(this)"
+             style="cursor:text">${esc(String(v))}</div>
+      </div>`;
+    }
+    return `<div class="ocr-field">
       <label>${OCR_LABEL_MAP[k]||k}</label>
       <div class="ocr-val" contenteditable="true" data-key="${esc(k)}">${esc(String(v))}</div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   document.getElementById('ocrSection').innerHTML=html||'<div class="ocr-hint">Niciun câmp extras.</div>';
   // Also update persistent panel in template sidebar
   updateOcrPersistPanel();
-  // Auto-search CNP in loaded table
+  // Auto-search CNP in loaded table (only if table already loaded)
   if (data.CNP && _sqlAllRows.length) _ocrSearchTable(data.CNP);
+}
+
+function ocrCnpEdited(el) {
+  // Debounced re-search when user edits CNP field
+  clearTimeout(el._t);
+  el._t = setTimeout(() => {
+    const cnp = el.textContent.trim();
+    if (cnp.length >= 6 && _sqlAllRows.length) _ocrSearchTable(cnp);
+  }, 500);
+}
+
+function ocrSearchCnpBtn(btn) {
+  // Find CNP value from sibling contenteditable div
+  const field = btn.closest('.ocr-field');
+  const val = field ? (field.querySelector('[data-key="CNP"]')?.textContent||'').trim() : '';
+  if (!val) { alert('Câmpul CNP este gol.'); return; }
+  if (!_sqlAllRows.length) { alert('Niciun tabel Excel/SQL încărcat.\nImportă un fișier Excel mai întâi.'); return; }
+  _ocrSearchTable(val);
 }
 
 function updateOcrPersistPanel() {
@@ -4268,6 +4300,8 @@ function importExcelFile(input) {
       _sqlRendered = false;
       _setSrcBadge('excel', file.name, wb.SheetNames[0]);
       _updateXlsBadge(file.name);
+      // Dacă există CNP din OCR anterior, caută automat acum că datele sunt disponibile
+      if (persistOcrData?.CNP) _ocrSearchTable(persistOcrData.CNP);
       document.getElementById('sqlCount').textContent = `${_sqlAllRows.length} rânduri`;
       document.getElementById('sqlFooterInfo').textContent = `${_sqlAllRows.length} rânduri · ${wb.SheetNames[0]} · ${file.name}`;
       const now = new Date();
