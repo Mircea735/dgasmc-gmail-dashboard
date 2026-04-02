@@ -1988,11 +1988,21 @@ function clearPersistOcr() {
 function _ocrSearchTable(cnp) {
   const card = document.getElementById('ocrTableCard');
   if (!cnp || !_sqlAllRows.length) { card.style.display='none'; return; }
-  const cnpStr = String(cnp).trim();
+  // Normalizare: păstrează doar cifre pentru comparare robustă
+  // (SheetJS poate stoca CNP ca număr; OCR poate adăuga spații)
+  const cnpStr    = String(cnp).trim();
+  const cnpDigits = cnpStr.replace(/\D/g, '');
 
-  // Find all rows where any column exactly matches the CNP
+  function cellMatchesCnp(v) {
+    if (v === null || v === undefined) return false;
+    const s = String(v).trim();
+    if (s === cnpStr) return true;                        // match exact
+    const d = s.replace(/\D/g, '');
+    return d.length >= 10 && d === cnpDigits;             // match cifre (nr. sau string cu sep.)
+  }
+
   const hits = _sqlAllRows.filter(row =>
-    _sqlColumns.some(c => String(row[c]??'').trim() === cnpStr)
+    _sqlColumns.some(c => cellMatchesCnp(row[c]))
   );
 
   card.style.display = '';
@@ -2005,7 +2015,7 @@ function _ocrSearchTable(cnp) {
   }
 
   // Columns to display: exclude CNP col + prefer Nume/Prenume/Sector/Status + others
-  const cnpCol  = _sqlColumns.find(c => String(hits[0][c]??'').trim() === cnpStr) || '';
+  const cnpCol  = _sqlColumns.find(c => cellMatchesCnp(hits[0][c])) || '';
   const priority = /^(nume|prenume|sector|status|situatie|adresa|localitate|observ|data|suma|suma|luna|stare)/i;
   const showCols = _sqlColumns
     .filter(c => c !== cnpCol)
