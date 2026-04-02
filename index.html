@@ -398,6 +398,49 @@ button,input,select,textarea{font-family:var(--sans);}
 .sumar-tabel td{padding:4px 8px;border:1px solid var(--border);color:var(--text2);font-family:var(--mono);white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis;}
 .sumar-tabel tr:hover td{background:rgba(168,85,247,.04);}
 .sumar-tabel .row-sep td{background:var(--surface2);color:var(--text3);font-size:10px;font-style:italic;padding:2px 8px;border-bottom:2px solid #a855f7;}
+/* ── Analiză Date modal ─────────────────────────────── */
+.aq-modal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;display:flex;align-items:flex-start;justify-content:center;padding:14px;}
+.aq-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;width:min(1300px,calc(100vw - 28px));max-height:calc(100vh - 28px);display:flex;flex-direction:column;box-shadow:0 8px 48px rgba(0,0,0,.28);overflow:hidden;}
+.aq-header{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:2px solid #06b6d4;flex-shrink:0;}
+.aq-title{font-size:13px;font-weight:700;color:#06b6d4;}
+.aq-tabs{display:flex;gap:2px;padding:0 16px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface2);}
+.aq-tab{padding:7px 14px;font-size:12px;cursor:pointer;border:none;background:none;color:var(--text3);border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .12s;}
+.aq-tab:hover{color:var(--text);}
+.aq-tab.active{color:#06b6d4;border-bottom-color:#06b6d4;font-weight:600;}
+.aq-body{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0;}
+.aq-pane{display:none;flex:1;overflow:auto;padding:14px 16px;}
+.aq-pane.active{display:flex;flex-direction:column;gap:10px;}
+.aq-footer{display:flex;align-items:center;gap:10px;padding:8px 16px;border-top:1px solid var(--border);flex-shrink:0;background:var(--surface2);}
+.aq-stat{font-size:11px;font-family:var(--mono);color:var(--text3);}
+/* Profil tab */
+.aq-profile-table{width:100%;border-collapse:collapse;font-size:11px;}
+.aq-profile-table th{background:var(--surface3);color:var(--text3);font-size:10px;text-transform:uppercase;padding:5px 8px;border:1px solid var(--border);white-space:nowrap;position:sticky;top:0;}
+.aq-profile-table td{padding:4px 8px;border:1px solid var(--border);vertical-align:top;}
+.aq-bar-wrap{height:6px;background:var(--surface3);border-radius:3px;margin-top:3px;width:100%;min-width:60px;}
+.aq-bar{height:100%;border-radius:3px;background:#06b6d4;}
+.aq-type-badge{font-size:9px;padding:1px 5px;border-radius:3px;font-weight:600;}
+.aq-type-text{background:rgba(99,102,241,.15);color:#818cf8;}
+.aq-type-number{background:rgba(16,185,129,.15);color:#10b981;}
+.aq-type-date{background:rgba(245,158,11,.15);color:#f59e0b;}
+.aq-type-email{background:rgba(37,99,235,.15);color:var(--accent);}
+.aq-type-bool{background:rgba(168,85,247,.15);color:#a855f7;}
+/* Filtru tab */
+.aq-filter-row{display:grid;grid-template-columns:1fr 140px 1fr 28px;gap:6px;align-items:center;}
+.aq-select,.aq-input{background:var(--surface3);border:1px solid var(--border);color:var(--text);font-size:12px;padding:4px 8px;border-radius:4px;outline:none;width:100%;}
+.aq-select:focus,.aq-input:focus{border-color:#06b6d4;}
+.aq-logic-toggle{display:flex;gap:0;}
+.aq-logic-toggle button{padding:3px 12px;font-size:11px;border:1px solid var(--border);background:var(--surface3);color:var(--text3);cursor:pointer;}
+.aq-logic-toggle button:first-child{border-radius:4px 0 0 4px;}
+.aq-logic-toggle button:last-child{border-radius:0 4px 4px 0;}
+.aq-logic-toggle button.on{background:#06b6d4;border-color:#06b6d4;color:#fff;font-weight:600;}
+/* Grupare tab */
+.aq-agg-row{display:grid;grid-template-columns:1fr 110px 1fr 28px;gap:6px;align-items:center;}
+.aq-preview-table{width:100%;border-collapse:collapse;font-size:11px;margin-top:4px;}
+.aq-preview-table th{background:var(--surface3);color:var(--text3);font-size:10px;text-transform:uppercase;padding:4px 8px;border:1px solid var(--border);white-space:nowrap;}
+.aq-preview-table td{padding:3px 8px;border:1px solid var(--border);color:var(--text2);font-family:var(--mono);white-space:nowrap;}
+/* Grafic tab */
+.aq-chart-wrap{flex:1;min-height:300px;display:flex;align-items:center;justify-content:center;position:relative;}
+.aq-chart-wrap canvas{max-width:100%;max-height:420px;}
 
 /* ── SPINNER / MISC ── */
 .spinner{display:inline-block;width:13px;height:13px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;}
@@ -3093,6 +3136,504 @@ function hideRaportModal() {
   document.getElementById('raportModal').classList.add('hidden');
 }
 
+// ══════════════════════════════════════════════════════════════
+// ANALIZĂ DATE (Power Query-style)
+// ══════════════════════════════════════════════════════════════
+let _aqLogic = 'AND';
+let _aqFilters = [];       // [{col, op, val}]
+let _aqAggs = [];          // [{col, fn, alias}]
+let _aqGroupOutput = 'table'; // 'table' | 'cards'
+let _aqChartType = 'bar';
+let _aqChart = null;       // Chart.js instance
+let _aqFilteredRows = null; // null = no active filter
+
+const AQ_OPS = ['conține','nu conține','egal cu','diferit de',
+                'mai mare','mai mic','începe cu','se termină cu','gol','ne-gol'];
+const AQ_FNS = ['Count','Sum','Avg','Min','Max','Concat'];
+
+function showAqModal() {
+  if (!_sqlAllRows.length) { alert('Încarcă date mai întâi.'); return; }
+  document.getElementById('aqModal').classList.remove('hidden');
+  document.getElementById('aqDataInfo').textContent =
+    `${_sqlAllRows.length} rânduri · ${_sqlColumns.length} coloane`;
+  document.getElementById('aqFooterStat').textContent =
+    `${_sqlAllRows.length} rânduri · ${_sqlColumns.length} coloane`;
+  _aqBuildProfileTab();
+  _aqPopulateSelects();
+  _aqUpdateFilterCount();
+}
+
+function hideAqModal() {
+  document.getElementById('aqModal').classList.add('hidden');
+}
+
+function aqTab(name) {
+  const names = ['profil','filtru','grupare','grafic','extractie'];
+  document.querySelectorAll('.aq-tab').forEach((t,i) => t.classList.toggle('active', names[i] === name));
+  document.querySelectorAll('.aq-pane').forEach(p => p.classList.remove('active'));
+  const paneId = 'aqPane' + name.charAt(0).toUpperCase() + name.slice(1);
+  document.getElementById(paneId)?.classList.add('active');
+  if (name === 'profil') _aqBuildProfileTab();
+  if (name === 'extractie') _aqPopulateSelects();
+}
+
+// ── Profil ────────────────────────────────────────────────────
+function _aqDetectType(col, rows) {
+  const vals = rows.map(r => r[col]).filter(v => v !== null && v !== undefined && String(v).trim() !== '');
+  if (!vals.length) return 'gol';
+  const s = String(vals[0]).trim();
+  if (_looksLikeEmail(s)) return 'email';
+  if (/^\d{2}[./]\d{2}[./]\d{4}$/.test(s)) return 'date';
+  if (/^(da|nu|true|false|yes|no|1|0)$/i.test(s) && new Set(vals.map(v=>String(v).toLowerCase())).size <= 3) return 'bool';
+  if (vals.slice(0,20).every(v => !isNaN(parseFloat(String(v))) && isFinite(String(v)))) return 'number';
+  return 'text';
+}
+
+function _aqBuildProfileTab() {
+  const rows = _sqlAllRows;
+  const total = rows.length;
+  let html = `<thead><tr>
+    <th>Coloană</th><th>Tip</th><th>Completat</th><th>Unice</th>
+    <th>Min / Primă val.</th><th>Max / Ultimă val.</th><th>Top 3 valori</th>
+  </tr></thead><tbody>`;
+
+  _sqlColumns.forEach(col => {
+    const vals = rows.map(r => r[col]);
+    const nonNull = vals.filter(v => v !== null && v !== undefined && String(v).trim() !== '');
+    const pct = total ? Math.round(nonNull.length / total * 100) : 0;
+    const type = _aqDetectType(col, rows);
+    const uniq = new Set(nonNull.map(v => String(v).trim())).size;
+
+    // Min/Max or first/last
+    let minVal = '—', maxVal = '—';
+    if (type === 'number') {
+      const nums = nonNull.map(v => parseFloat(String(v)));
+      minVal = Math.min(...nums).toLocaleString('ro-RO');
+      maxVal = Math.max(...nums).toLocaleString('ro-RO');
+    } else if (type === 'date') {
+      const sorted = [...nonNull].sort();
+      minVal = String(sorted[0]||'').slice(0,10);
+      maxVal = String(sorted[sorted.length-1]||'').slice(0,10);
+    } else {
+      const sorted = [...nonNull].map(v=>String(v)).sort();
+      minVal = (sorted[0]||'').slice(0,25);
+      maxVal = (sorted[sorted.length-1]||'').slice(0,25);
+    }
+
+    // Top 3 frequencies
+    const freq = {};
+    nonNull.forEach(v => { const k = String(v).trim(); freq[k] = (freq[k]||0)+1; });
+    const top3 = Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,3)
+      .map(([k,c]) => `<span title="${esc(k)}" style="cursor:default">${esc(k.slice(0,18))}(${c})</span>`).join(' · ');
+
+    const typeCls = {text:'aq-type-text',number:'aq-type-number',date:'aq-type-date',
+                     email:'aq-type-email',bool:'aq-type-bool',gol:'aq-type-text'}[type]||'aq-type-text';
+    html += `<tr>
+      <td style="font-weight:600;white-space:nowrap">${esc(col)}</td>
+      <td><span class="aq-type-badge ${typeCls}">${type}</span></td>
+      <td style="min-width:90px">
+        <div style="font-size:10px;font-family:var(--mono)">${nonNull.length}/${total} (${pct}%)</div>
+        <div class="aq-bar-wrap"><div class="aq-bar" style="width:${pct}%"></div></div>
+      </td>
+      <td style="font-family:var(--mono);font-size:11px">${uniq.toLocaleString('ro-RO')}</td>
+      <td style="font-family:var(--mono);font-size:10px;max-width:140px;overflow:hidden;text-overflow:ellipsis">${esc(minVal)}</td>
+      <td style="font-family:var(--mono);font-size:10px;max-width:140px;overflow:hidden;text-overflow:ellipsis">${esc(maxVal)}</td>
+      <td style="font-size:10px;color:var(--text3)">${top3||'—'}</td>
+    </tr>`;
+  });
+  html += '</tbody>';
+  document.getElementById('aqProfileTable').innerHTML = html;
+}
+
+// ── Filtru ────────────────────────────────────────────────────
+function _aqPopulateSelects() {
+  const opts = _sqlColumns.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  // Filter rows
+  document.getElementById('aqFilterRows').querySelectorAll('.aq-filter-row').forEach(row => {
+    const sel = row.querySelector('.aq-col-sel');
+    if (sel) { const cur = sel.value; sel.innerHTML = opts; if (cur) sel.value = cur; }
+  });
+  // Group by
+  document.getElementById('aqGroupByCol').innerHTML = opts;
+  // Chart selects
+  const yOpts = '<option value="__count">— Număr apariții —</option>' + opts;
+  document.getElementById('aqChartX').innerHTML = opts;
+  document.getElementById('aqChartY').innerHTML = yOpts;
+  // Extragere col — prefer obs/note/remarci/observatii column
+  document.getElementById('aqExtCol').innerHTML = opts;
+  const obsCol = _sqlColumns.find(c => /obs|note|remarc|istoricul|situatia|text/i.test(c));
+  if (obsCol) document.getElementById('aqExtCol').value = obsCol;
+}
+
+function aqSetLogic(l) {
+  _aqLogic = l;
+  document.getElementById('aqLogicAnd').classList.toggle('on', l==='AND');
+  document.getElementById('aqLogicOr').classList.toggle('on', l==='OR');
+}
+
+function aqAddFilter() {
+  const idx = _aqFilters.length;
+  _aqFilters.push({col: _sqlColumns[0]||'', op: 'conține', val: ''});
+  const opts = _sqlColumns.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  const opOpts = AQ_OPS.map(o => `<option>${o}</option>`).join('');
+  const div = document.createElement('div');
+  div.className = 'aq-filter-row';
+  div.dataset.idx = idx;
+  div.innerHTML = `
+    <select class="aq-select aq-col-sel" onchange="aqFilterChange(${idx},'col',this.value)">${opts}</select>
+    <select class="aq-select" onchange="aqFilterChange(${idx},'op',this.value)">${opOpts}</select>
+    <input class="aq-input" placeholder="valoare..." onchange="aqFilterChange(${idx},'val',this.value)" oninput="aqFilterChange(${idx},'val',this.value)">
+    <button onclick="aqRemoveFilter(${idx})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px">×</button>`;
+  document.getElementById('aqFilterRows').appendChild(div);
+  _aqUpdateFilterCount();
+}
+
+function aqFilterChange(idx, field, val) {
+  if (_aqFilters[idx]) { _aqFilters[idx][field] = val; _aqUpdateFilterCount(); }
+}
+
+function aqRemoveFilter(idx) {
+  document.querySelectorAll(`#aqFilterRows .aq-filter-row[data-idx="${idx}"]`).forEach(el => el.remove());
+  _aqFilters[idx] = null;
+  _aqUpdateFilterCount();
+}
+
+function aqResetFilters() {
+  _aqFilters = [];
+  _aqFilteredRows = null;
+  document.getElementById('aqFilterRows').innerHTML = '';
+  _aqUpdateFilterCount();
+  document.getElementById('aqActiveFiltersInfo').textContent = '';
+}
+
+function _aqMatchRow(row, f) {
+  const v = String(row[f.col]??'').toLowerCase();
+  const q = (f.val||'').toLowerCase();
+  switch(f.op) {
+    case 'conține':       return v.includes(q);
+    case 'nu conține':    return !v.includes(q);
+    case 'egal cu':       return v === q;
+    case 'diferit de':    return v !== q;
+    case 'mai mare':      return parseFloat(v) > parseFloat(q);
+    case 'mai mic':       return parseFloat(v) < parseFloat(q);
+    case 'începe cu':     return v.startsWith(q);
+    case 'se termină cu': return v.endsWith(q);
+    case 'gol':           return !String(row[f.col]??'').trim();
+    case 'ne-gol':        return !!String(row[f.col]??'').trim();
+    default: return true;
+  }
+}
+
+function _aqApplyFiltersToRows(rows) {
+  const active = _aqFilters.filter(Boolean).filter(f => f.col);
+  if (!active.length) return rows;
+  return rows.filter(row => {
+    const results = active.map(f => _aqMatchRow(row, f));
+    return _aqLogic === 'AND' ? results.every(Boolean) : results.some(Boolean);
+  });
+}
+
+function _aqUpdateFilterCount() {
+  const active = _aqFilters.filter(Boolean).filter(f => f.col);
+  if (!active.length) { document.getElementById('aqFilterCount').textContent = ''; return; }
+  const matching = _aqApplyFiltersToRows(_sqlAllRows);
+  document.getElementById('aqFilterCount').textContent =
+    `${matching.length.toLocaleString('ro-RO')} / ${_sqlAllRows.length.toLocaleString('ro-RO')} rânduri`;
+}
+
+function aqApplyFilter() {
+  const active = _aqFilters.filter(Boolean).filter(f => f.col);
+  if (!active.length) { alert('Adaugă cel puțin o condiție.'); return; }
+  _aqFilteredRows = _aqApplyFiltersToRows(_sqlAllRows);
+  hideAqModal();
+  renderSqlTable(_aqFilteredRows);
+  document.getElementById('sqlCount').textContent =
+    `${_aqFilteredRows.length} / ${_sqlAllRows.length} (filtrat)`;
+  document.getElementById('aqActiveFiltersInfo').textContent =
+    `${active.length} filtru/filtre active · ${_aqFilteredRows.length} rânduri`;
+  // Show reset button in SQL toolbar
+  const fb = document.getElementById('aqFilterBadge');
+  if (fb) { fb.style.display = ''; fb.textContent = `✕ ${_aqFilteredRows.length} filtrat`; }
+}
+
+// ── Grupare ───────────────────────────────────────────────────
+function aqSetOutput(mode) {
+  _aqGroupOutput = mode;
+  document.getElementById('aqOutTable').classList.toggle('on', mode==='table');
+  document.getElementById('aqOutCards').classList.toggle('on', mode==='cards');
+}
+
+function aqAddAgg() {
+  const idx = _aqAggs.length;
+  _aqAggs.push({col: _sqlColumns[0]||'', fn: 'Count', alias: ''});
+  const opts = _sqlColumns.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  const fnOpts = AQ_FNS.map(f => `<option>${f}</option>`).join('');
+  const div = document.createElement('div');
+  div.className = 'aq-agg-row';
+  div.dataset.idx = idx;
+  div.innerHTML = `
+    <select class="aq-select" onchange="aqAggChange(${idx},'col',this.value)">${opts}</select>
+    <select class="aq-select" onchange="aqAggChange(${idx},'fn',this.value)">${fnOpts}</select>
+    <input class="aq-input" placeholder="Alias (opțional)" oninput="aqAggChange(${idx},'alias',this.value)">
+    <button onclick="aqRemoveAgg(${idx})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px">×</button>`;
+  document.getElementById('aqAggRows').appendChild(div);
+}
+
+function aqAggChange(idx, field, val) { if (_aqAggs[idx]) _aqAggs[idx][field] = val; }
+function aqRemoveAgg(idx) {
+  document.querySelectorAll(`#aqAggRows .aq-agg-row[data-idx="${idx}"]`).forEach(el => el.remove());
+  _aqAggs[idx] = null;
+}
+
+function _aqComputeGroups() {
+  const groupCol = document.getElementById('aqGroupByCol').value;
+  const activeAggs = _aqAggs.filter(Boolean).filter(a => a.col);
+  const sourceRows = _aqFilteredRows || _sqlAllRows;
+  const groups = {};
+  sourceRows.forEach(row => {
+    const key = String(row[groupCol]??'—');
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(row);
+  });
+  const resultCols = [groupCol];
+  // Default: always add Count if no aggs defined
+  const aggs = activeAggs.length ? activeAggs : [{col: groupCol, fn: 'Count', alias: 'Nr. rânduri'}];
+  aggs.forEach(a => resultCols.push(a.alias || `${a.fn}(${a.col})`));
+
+  const resultRows = Object.entries(groups).sort((a,b) => a[0].localeCompare(b[0],'ro')).map(([key, rows]) => {
+    const obj = {[groupCol]: key};
+    aggs.forEach(a => {
+      const alias = a.alias || `${a.fn}(${a.col})`;
+      const vals = rows.map(r => r[a.col]).filter(v => v !== null && v !== undefined);
+      switch(a.fn) {
+        case 'Count':  obj[alias] = rows.length; break;
+        case 'Sum':    obj[alias] = vals.reduce((s,v) => s + (parseFloat(String(v))||0), 0).toLocaleString('ro-RO'); break;
+        case 'Avg':    obj[alias] = vals.length ? (vals.reduce((s,v)=>s+(parseFloat(String(v))||0),0)/vals.length).toFixed(2) : '—'; break;
+        case 'Min':    obj[alias] = vals.length ? vals.reduce((m,v)=>String(v)<String(m)?v:m) : '—'; break;
+        case 'Max':    obj[alias] = vals.length ? vals.reduce((m,v)=>String(v)>String(m)?v:m) : '—'; break;
+        case 'Concat': obj[alias] = [...new Set(vals.map(v=>String(v)))].slice(0,10).join(', '); break;
+      }
+    });
+    return {_rows: rows, ...obj};
+  });
+  return {resultCols, resultRows, groupCol};
+}
+
+function aqPreviewGroup() {
+  const {resultCols, resultRows} = _aqComputeGroups();
+  const preview20 = resultRows.slice(0, 20);
+  if (_aqGroupOutput === 'cards') {
+    _aqRenderGroupCards(resultRows, resultCols, 'aqGroupPreview');
+  } else {
+    let html = `<div style="font-size:11px;color:var(--text3);margin-bottom:4px">Preview primele 20 din ${resultRows.length} grupuri</div>`;
+    html += '<div style="overflow:auto"><table class="aq-preview-table"><thead><tr>';
+    resultCols.forEach(c => html += `<th>${esc(c)}</th>`);
+    html += '</tr></thead><tbody>';
+    preview20.forEach(row => {
+      html += '<tr>' + resultCols.map(c => `<td>${esc(String(row[c]??''))}</td>`).join('') + '</tr>';
+    });
+    html += '</tbody></table></div>';
+    document.getElementById('aqGroupPreview').innerHTML = html;
+  }
+}
+
+function _aqRenderGroupCards(resultRows, resultCols, containerId) {
+  const groupCol = resultCols[0];
+  const metaCols = resultCols.slice(1);
+  const colors = ['#06b6d4','#10b981','#a855f7','#f59e0b','#3b82f6','#ec4899'];
+  let html = `<div style="display:flex;flex-wrap:wrap;gap:10px;padding:4px 0">`;
+  resultRows.forEach((row, i) => {
+    const color = colors[i % colors.length];
+    html += `<div style="background:var(--surface2);border:1px solid var(--border);border-top:3px solid ${color};
+      border-radius:8px;padding:10px 14px;min-width:200px;max-width:300px;flex:1;">
+      <div style="font-size:13px;font-weight:700;color:${color};margin-bottom:6px;word-break:break-all">${esc(String(row[groupCol]))}</div>`;
+    metaCols.forEach(c => {
+      html += `<div style="display:flex;justify-content:space-between;font-size:11px;border-top:1px solid var(--border);padding:3px 0">
+        <span style="color:var(--text3)">${esc(c)}</span>
+        <span style="font-family:var(--mono);font-weight:600">${esc(String(row[c]??''))}</span>
+      </div>`;
+    });
+    // Expand rows button if underlying rows available
+    if (row._rows && row._rows.length > 0) {
+      html += `<div style="margin-top:6px;font-size:10px;color:var(--text3);text-align:right">${row._rows.length} rând${row._rows.length!==1?'uri':''}</div>`;
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+  document.getElementById(containerId).innerHTML = html;
+}
+
+function aqApplyGroup() {
+  const {resultCols, resultRows} = _aqComputeGroups();
+  const cleanRows = resultRows.map(r => { const o={...r}; delete o._rows; return o; });
+  _sqlAllRows = cleanRows;
+  _sqlColumns = resultCols;
+  _sqlSortCol = ''; _sqlSortAsc = true;
+  _aqFilteredRows = null;
+  hideAqModal();
+  renderSqlTable(_sqlAllRows);
+  document.getElementById('sqlCount').textContent = `${_sqlAllRows.length} grupuri`;
+  document.getElementById('btnSumar').style.display = ''; document.getElementById('btnAq').style.display = '';
+}
+
+// ── Grafic ────────────────────────────────────────────────────
+function aqSetChartType(type) {
+  _aqChartType = type;
+  document.querySelectorAll('#aqChartTypeBtns button').forEach((b,i) => {
+    b.classList.toggle('on', ['bar','horizontalBar','pie','line'][i] === type);
+  });
+}
+
+// ── Extragere câmpuri din coloană text ───────────────────────
+let _aqExtractedCols = null; // {colName: [val, ...]}
+
+function _aqParseObsText(text) {
+  const s = String(text||'');
+  const result = {};
+
+  // Dată (DD.MM.YYYY sau MM.YYYY)
+  const dateM = s.match(/\b(\d{2}\.\d{4})\b/);
+  result['Ext_LunăAn'] = dateM ? dateM[1] : '';
+
+  const fullDateM = s.match(/\b(\d{2}\.\d{2}\.\d{4})\b/);
+  result['Ext_DataCompleta'] = fullDateM ? fullDateM[1] : '';
+
+  // Status
+  if (/aprobat/i.test(s)) result['Ext_Status'] = 'Aprobat';
+  else if (/suspendat/i.test(s)) result['Ext_Status'] = 'Suspendat';
+  else if (/respins/i.test(s)) result['Ext_Status'] = 'Respins';
+  else if (/achitat|platit|OP\s+\d/i.test(s)) result['Ext_Status'] = 'Plătit';
+  else result['Ext_Status'] = '';
+
+  // OP number
+  const opM = s.match(/OP\s+(\d+)/i);
+  result['Ext_NrOP'] = opM ? opM[1] : '';
+
+  // Motiv
+  const motivM = s.match(/motiv[:\s]+([^/\n]{3,60})/i);
+  result['Ext_Motiv'] = motivM ? motivM[1].trim() : '';
+
+  // Număr document / dosar
+  const nrDocM = s.match(/nr\.?\s*(\d+[\/\-]?\d*)/i);
+  result['Ext_NrDoc'] = nrDocM ? nrDocM[1] : '';
+
+  // Datorii
+  result['Ext_Datorii'] = /datorie|datorii|recuperat/i.test(s) ? 'Da' : '';
+
+  return result;
+}
+
+function aqRunExtract() {
+  const col = document.getElementById('aqExtCol').value;
+  if (!col) return;
+  const sourceRows = _aqFilteredRows || _sqlAllRows;
+  const parsed = sourceRows.map(row => _aqParseObsText(row[col]));
+  const newCols = Object.keys(parsed[0] || {});
+  _aqExtractedCols = {col, newCols, parsed};
+
+  // Build preview table
+  const previewRows = sourceRows.slice(0, 30);
+  let html = `<div style="font-size:11px;color:var(--text3);margin-bottom:6px">
+    Preview primele 30 rânduri · ${parsed.filter(r=>r.Ext_Status).length} cu status detectat</div>`;
+  html += '<div style="overflow:auto"><table class="aq-preview-table"><thead><tr>';
+  html += `<th style="max-width:200px">${esc(col)}</th>`;
+  newCols.forEach(c => html += `<th>${esc(c.replace('Ext_',''))}</th>`);
+  html += '</tr></thead><tbody>';
+  previewRows.forEach((row, i) => {
+    const ex = parsed[i];
+    html += `<tr><td style="max-width:200px;white-space:normal;font-size:10px">${esc(String(row[col]||'').slice(0,120))}</td>`;
+    newCols.forEach(c => {
+      const v = ex[c]||'';
+      const color = c==='Ext_Status' && v ? (v==='Plătit'?'#10b981':v==='Aprobat'?'#06b6d4':v==='Suspendat'?'#f59e0b':'#f87171') : '';
+      html += `<td style="${color?'color:'+color+';font-weight:600':''}">${esc(v)}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  document.getElementById('aqExtPreview').innerHTML = html;
+  document.getElementById('aqApplyExtractBtn').style.display = '';
+}
+
+function aqApplyExtract() {
+  if (!_aqExtractedCols) return;
+  const {newCols, parsed} = _aqExtractedCols;
+  const sourceRows = _aqFilteredRows || _sqlAllRows;
+  // Add new columns to each row
+  sourceRows.forEach((row, i) => {
+    newCols.forEach(c => { row[c] = parsed[i]?.[c] ?? ''; });
+  });
+  newCols.forEach(c => { if (!_sqlColumns.includes(c)) _sqlColumns.push(c); });
+  hideAqModal();
+  renderSqlTable(_sqlAllRows);
+  document.getElementById('sqlCount').textContent = `${_sqlAllRows.length} rânduri · +${newCols.length} col. extrase`;
+}
+
+async function aqRenderChart() {
+  if (typeof Chart === 'undefined') {
+    document.getElementById('aqChartWrap').innerHTML = '<div class="spinner"></div>';
+    await loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js');
+  }
+  const xCol = document.getElementById('aqChartX').value;
+  const yCol = document.getElementById('aqChartY').value;
+  const limit = parseInt(document.getElementById('aqChartLimit').value)||20;
+  const sourceRows = _aqFilteredRows || _sqlAllRows;
+
+  // Aggregate: group by X, aggregate Y
+  const groups = {};
+  sourceRows.forEach(row => {
+    const key = String(row[xCol]??'—').trim().slice(0,40);
+    if (!groups[key]) groups[key] = {sum:0, count:0};
+    groups[key].count++;
+    if (yCol !== '__count') {
+      const n = parseFloat(String(row[yCol]||'0'));
+      if (!isNaN(n)) groups[key].sum += n;
+    }
+  });
+
+  let entries = Object.entries(groups)
+    .map(([k,v]) => ({k, val: yCol==='__count' ? v.count : v.sum}))
+    .sort((a,b) => b.val - a.val)
+    .slice(0, limit);
+
+  const labels = entries.map(e => e.k);
+  const data   = entries.map(e => e.val);
+  const palette = ['#06b6d4','#10b981','#a855f7','#f59e0b','#3b82f6','#ec4899','#f87171','#34d399'];
+
+  if (_aqChart) { _aqChart.destroy(); _aqChart = null; }
+  const wrap = document.getElementById('aqChartWrap');
+  wrap.innerHTML = '<canvas id="aqCanvas"></canvas>';
+  const ctx = document.getElementById('aqCanvas').getContext('2d');
+
+  const isPie = _aqChartType === 'pie';
+  const isHBar = _aqChartType === 'horizontalBar';
+  _aqChart = new Chart(ctx, {
+    type: isPie ? 'pie' : 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: yCol === '__count' ? 'Număr apariții' : yCol,
+        data,
+        backgroundColor: isPie ? labels.map((_,i)=>palette[i%palette.length]) : '#06b6d4',
+        borderColor: isPie ? '#1e293b' : '#0891b2',
+        borderWidth: 1,
+      }]
+    },
+    options: {
+      indexAxis: isHBar ? 'y' : 'x',
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {display: isPie, labels:{color:'#94a3b8',font:{size:11}}},
+        tooltip: {callbacks:{label: ctx => ` ${ctx.parsed[isHBar?'x':'y']?.toLocaleString('ro-RO')}`}}
+      },
+      scales: isPie ? {} : {
+        x: {ticks:{color:'#94a3b8',font:{size:10},maxRotation:45}, grid:{color:'#1e293b'}},
+        y: {ticks:{color:'#94a3b8',font:{size:10}}, grid:{color:'#1e293b'}}
+      }
+    }
+  });
+}
+
 function rjPickFile(input, targetId) {
   // input.files[0] gives a File object — we need the path.
   // In Electron/local server context the file:// path is available via webkitRelativePath or
@@ -3280,7 +3821,7 @@ async function loadSqlData() {
     _setSrcBadge('db');
     document.getElementById('sqlCount').textContent = `${_sqlAllRows.length} înregistrări`;
     document.getElementById('sqlFooterInfo').textContent = `${_sqlAllRows.length} beneficiari · view: ${localStorage.getItem('sqlViewName')||''}`;
-    document.getElementById('btnSumar').style.display = _sqlAllRows.length ? '' : 'none';
+    document.getElementById('btnSumar').style.display = _sqlAllRows.length ? '' : 'none'; document.getElementById('btnAq').style.display = _sqlAllRows.length ? '' : 'none';
     document.getElementById('btnSqlTable').style.display = 'none';
     const now = new Date();
     document.getElementById('sqlLastLoad').textContent = `Actualizat: ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
@@ -3535,7 +4076,7 @@ function promoteFirstRowAsHeader() {
   document.getElementById('btnPromoteHeader').style.display = 'none';
   renderSqlTable(_sqlAllRows);
   document.getElementById('sqlCount').textContent = `${_sqlAllRows.length} rânduri`;
-  document.getElementById('btnSumar').style.display = _sqlAllRows.length ? '' : 'none';
+  document.getElementById('btnSumar').style.display = _sqlAllRows.length ? '' : 'none'; document.getElementById('btnAq').style.display = _sqlAllRows.length ? '' : 'none';
 }
 
 function _showHeaderPromotedNotice(reason) {
@@ -3782,6 +4323,7 @@ function showRegConfirmInSidebar(nr, toEmail, emailStatus) {
       </label>
       <button class="tb-btn" onclick="promoteFirstRowAsHeader()" id="btnPromoteHeader" style="display:none;border-color:#f59e0b;color:#f59e0b" title="Tratează primul rând de date ca header de coloane">▲ Rând 1 → Header</button>
       <button class="tb-btn" onclick="showSumarPanel()" id="btnSumar" style="display:none;border-color:var(--purple);color:var(--purple)">📋 Sumar</button>
+      <button class="tb-btn" onclick="showAqModal()" id="btnAq" style="display:none;border-color:#06b6d4;color:#06b6d4">🔬 Analiză</button>
       <button class="tb-btn" onclick="showSqlTableView()" id="btnSqlTable" style="display:none">📄 Tabel</button>
       <button class="tb-btn" onclick="exportSqlCsv()" title="Export CSV">⬇ CSV</button>
       <button class="tb-btn" onclick="toggleSqlSettings()" title="Configurare conexiune SQL" id="btnSqlSettings">⚙ Conexiune</button>
@@ -4012,6 +4554,132 @@ function showRegConfirmInSidebar(nr, toEmail, emailStatus) {
         <button id="rjDownloadBtn" class="tb-btn hidden" onclick="rjDownload()" style="border-color:#10b981;color:#10b981">⬇ Descarcă rezultat</button>
         <span id="rjStatus" style="font-size:11px;color:var(--text3);align-self:center"></span>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ANALIZĂ DATE MODAL                                            -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div id="aqModal" class="aq-modal hidden" onclick="if(event.target===this)hideAqModal()">
+  <div class="aq-card">
+    <div class="aq-header">
+      <span class="aq-title">🔬 Analiză Date</span>
+      <span id="aqDataInfo" class="aq-stat"></span>
+      <button class="tb-btn" onclick="hideAqModal()" style="margin-left:auto">✕</button>
+    </div>
+    <div class="aq-tabs">
+      <button class="aq-tab active" onclick="aqTab('profil')">📊 Profil coloane</button>
+      <button class="aq-tab" onclick="aqTab('filtru')">🔍 Filtru avansat</button>
+      <button class="aq-tab" onclick="aqTab('grupare')">📐 Grupare</button>
+      <button class="aq-tab" onclick="aqTab('grafic')">📈 Grafic</button>
+      <button class="aq-tab" onclick="aqTab('extractie')">🧩 Extragere câmpuri</button>
+    </div>
+    <div class="aq-body">
+
+      <!-- TAB: PROFIL -->
+      <div id="aqPaneProfil" class="aq-pane active" style="padding:0;overflow:auto">
+        <table class="aq-profile-table" id="aqProfileTable"></table>
+      </div>
+
+      <!-- TAB: FILTRU -->
+      <div id="aqPaneFiltru" class="aq-pane">
+        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+          <span style="font-size:11px;color:var(--text3)">Logică între condiții:</span>
+          <div class="aq-logic-toggle">
+            <button id="aqLogicAnd" class="on" onclick="aqSetLogic('AND')">AND</button>
+            <button id="aqLogicOr"  onclick="aqSetLogic('OR')">OR</button>
+          </div>
+          <button class="tb-btn" onclick="aqAddFilter()" style="border-color:#06b6d4;color:#06b6d4">+ Condiție</button>
+          <button class="tb-btn" onclick="aqResetFilters()">↺ Resetează</button>
+          <span id="aqFilterCount" class="aq-stat" style="margin-left:auto"></span>
+        </div>
+        <div id="aqFilterRows" style="display:flex;flex-direction:column;gap:6px;margin-top:4px"></div>
+        <div style="margin-top:10px;display:flex;gap:8px">
+          <button class="tb-btn" onclick="aqApplyFilter()" style="border-color:#10b981;color:#10b981">✓ Aplică filtru în tabel</button>
+        </div>
+      </div>
+
+      <!-- TAB: GRUPARE -->
+      <div id="aqPaneGrupare" class="aq-pane">
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;flex-shrink:0">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label style="font-size:10px;color:var(--text3);text-transform:uppercase">Grupează după</label>
+            <select id="aqGroupByCol" class="aq-select" style="width:200px" onchange="aqPreviewGroup()"></select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label style="font-size:10px;color:var(--text3);text-transform:uppercase">Afișare rezultat</label>
+            <div class="aq-logic-toggle">
+              <button id="aqOutTable" class="on" onclick="aqSetOutput('table')">📄 Tabel</button>
+              <button id="aqOutCards" onclick="aqSetOutput('cards')">🃏 Carduri</button>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;margin-left:auto">
+            <label style="font-size:10px;color:var(--text3);text-transform:uppercase">&nbsp;</label>
+            <div style="display:flex;gap:6px">
+              <button class="tb-btn" onclick="aqAddAgg()" style="border-color:#06b6d4;color:#06b6d4">+ Agregare</button>
+              <button class="tb-btn" onclick="aqPreviewGroup()">👁 Preview</button>
+              <button class="tb-btn" onclick="aqApplyGroup()" style="border-color:#10b981;color:#10b981">✓ Aplică ca tabel</button>
+            </div>
+          </div>
+        </div>
+        <div id="aqAggRows" style="display:flex;flex-direction:column;gap:6px;margin:8px 0"></div>
+        <div id="aqGroupPreview" style="overflow:auto;flex:1"></div>
+      </div>
+
+      <!-- TAB: GRAFIC -->
+      <div id="aqPaneGrafic" class="aq-pane">
+        <div style="display:flex;flex-wrap:wrap;gap:12px;flex-shrink:0">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label style="font-size:10px;color:var(--text3);text-transform:uppercase">Tip grafic</label>
+            <div class="aq-logic-toggle" id="aqChartTypeBtns">
+              <button class="on" onclick="aqSetChartType('bar')">Bar</button>
+              <button onclick="aqSetChartType('horizontalBar')">Orizontal</button>
+              <button onclick="aqSetChartType('pie')">Pie</button>
+              <button onclick="aqSetChartType('line')">Line</button>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label style="font-size:10px;color:var(--text3);text-transform:uppercase">Axă X (etichete)</label>
+            <select id="aqChartX" class="aq-select" style="width:180px"></select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label style="font-size:10px;color:var(--text3);text-transform:uppercase">Axă Y (valori)</label>
+            <select id="aqChartY" class="aq-select" style="width:180px"></select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label style="font-size:10px;color:var(--text3);text-transform:uppercase">Max categorii</label>
+            <input type="number" id="aqChartLimit" class="aq-input" value="20" min="2" max="200" style="width:80px">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;justify-content:flex-end">
+            <button class="tb-btn" onclick="aqRenderChart()" style="border-color:#06b6d4;color:#06b6d4">▶ Generează</button>
+          </div>
+        </div>
+        <div class="aq-chart-wrap" id="aqChartWrap">
+          <span style="color:var(--text3);font-size:12px">Configurează și apasă ▶ Generează</span>
+        </div>
+      </div>
+
+      <!-- TAB: EXTRAGERE CÂMPURI -->
+      <div id="aqPaneExtractie" class="aq-pane">
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;flex-shrink:0">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label style="font-size:10px;color:var(--text3);text-transform:uppercase">Coloană Observații / text</label>
+            <select id="aqExtCol" class="aq-select" style="width:220px"></select>
+          </div>
+          <button class="tb-btn" onclick="aqRunExtract()" style="border-color:#06b6d4;color:#06b6d4">🧩 Extrage câmpuri</button>
+          <button class="tb-btn" onclick="aqApplyExtract()" id="aqApplyExtractBtn" style="display:none;border-color:#10b981;color:#10b981">✓ Adaugă coloane în tabel</button>
+          <span style="font-size:11px;color:var(--text3);max-width:300px">
+            Detectează automat: dată, status (aprobat/suspendat), motiv, OP, număr document
+          </span>
+        </div>
+        <div id="aqExtPreview" style="overflow:auto;flex:1;margin-top:8px"></div>
+      </div>
+
+    </div><!-- /.aq-body -->
+    <div class="aq-footer">
+      <span id="aqFooterStat" class="aq-stat"></span>
+      <span id="aqActiveFiltersInfo" class="aq-stat" style="color:#06b6d4"></span>
     </div>
   </div>
 </div>
