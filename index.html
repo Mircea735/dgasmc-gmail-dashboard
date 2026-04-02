@@ -17,6 +17,7 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 html{color-scheme:light;}
 html,body{height:100%;background:var(--bg);color:var(--text);overflow:hidden;font-family:var(--sans);font-size:18px;line-height:1.5;}
+body{display:flex;flex-direction:column;}
 button,input,select,textarea{font-family:var(--sans);}
 
 /* ── SCREENS ── */
@@ -80,7 +81,7 @@ button,input,select,textarea{font-family:var(--sans);}
 .bi-tab-icon{writing-mode:horizontal-tb;font-size:14px;margin-bottom:6px;}
 
 /* ── MAIN ── */
-.main{display:flex;height:calc(100vh - 48px);overflow:hidden;}
+.main{display:flex;flex:1;min-height:0;overflow:hidden;}
 
 /* ── COL INBOX ── */
 .col-inbox{width:290px;min-width:250px;border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;}
@@ -334,8 +335,22 @@ button,input,select,textarea{font-family:var(--sans);}
 .hi-subj{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .hist-empty{padding:14px 10px;font-size:11px;color:var(--text3);text-align:center;line-height:1.6;}
 /* ── SQL VIEWER MODAL ── */
+/* SQL/Excel bottom panel — nu mai e modal overlay */
 .sql-modal{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:400;display:flex;align-items:flex-start;justify-content:center;padding:16px;}
 .sql-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;width:calc(100vw - 32px);max-width:1600px;max-height:calc(100vh - 32px);display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.22);overflow:hidden;}
+/* Bottom panel */
+#sqlModal{position:fixed;bottom:0;left:0;right:0;height:var(--sql-panel-h,46vh);min-height:120px;max-height:90vh;
+  background:var(--surface);border-top:2px solid var(--teal);box-shadow:0 -4px 24px rgba(0,0,0,.25);
+  z-index:300;display:flex;flex-direction:column;transition:height .0s;}
+#sqlModal.hidden{display:none!important;}
+#sqlModal .sql-card{border-radius:0;width:100%;max-width:100%;height:100%;max-height:100%;border:none;box-shadow:none;}
+.sql-resize-handle{height:6px;background:var(--surface2);border-bottom:1px solid var(--border);
+  cursor:ns-resize;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.sql-resize-handle::after{content:'';width:40px;height:3px;background:var(--border);border-radius:2px;}
+.sql-resize-handle:hover{background:rgba(15,118,110,.15);}
+.sql-resize-handle:hover::after{background:var(--teal);}
+/* Reduce main area when SQL panel is open */
+body.sql-panel-open .main{height:calc(var(--sql-panel-h, 46vh) * -1 + 100vh - 48px);flex:none;min-height:80px;}
 .sql-topbar{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--surface2);flex-shrink:0;flex-wrap:wrap;}
 .sql-topbar h3{font-size:13px;font-weight:700;color:var(--teal);margin:0;white-space:nowrap;}
 .sql-search{flex:1;min-width:140px;background:var(--surface3);border:1px solid var(--border);color:var(--text);font-size:12px;padding:4px 9px;border-radius:4px;outline:none;}
@@ -3105,6 +3120,8 @@ function _sqlQuery() {
 
 function showSqlViewer() {
   document.getElementById('sqlModal').classList.remove('hidden');
+  document.body.classList.add('sql-panel-open');
+  _sqlResizeInit();
   // Populate settings fields from localStorage
   ['sqlServer','sqlDatabase','sqlUser','sqlViewName','sqlWhere'].forEach(k=>{
     const el=document.getElementById(k); if(el) el.value=localStorage.getItem(k)||'';
@@ -3116,6 +3133,49 @@ function showSqlViewer() {
 
 function hideSqlViewer() {
   document.getElementById('sqlModal').classList.add('hidden');
+  document.body.classList.remove('sql-panel-open');
+  document.body.style.removeProperty('--sql-panel-h');
+}
+
+function _sqlResizeInit() {
+  const handle = document.getElementById('sqlResizeHandle');
+  if (handle._resizeReady) return;
+  handle._resizeReady = true;
+  let startY, startH;
+  handle.addEventListener('mousedown', e => {
+    startY = e.clientY;
+    startH = document.getElementById('sqlModal').offsetHeight;
+    document.body.style.userSelect = 'none';
+    const onMove = ev => {
+      const delta = startY - ev.clientY;          // drag up = bigger panel
+      const newH  = Math.min(Math.max(startH + delta, 120), window.innerHeight * 0.88);
+      const pct   = (newH / window.innerHeight * 100).toFixed(1) + 'vh';
+      document.body.style.setProperty('--sql-panel-h', pct);
+    };
+    const onUp = () => {
+      document.body.style.removeProperty('user-select');
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+  // Touch support
+  handle.addEventListener('touchstart', e => {
+    startY = e.touches[0].clientY;
+    startH = document.getElementById('sqlModal').offsetHeight;
+    const onMove = ev => {
+      const delta = startY - ev.touches[0].clientY;
+      const newH  = Math.min(Math.max(startH + delta, 120), window.innerHeight * 0.88);
+      document.body.style.setProperty('--sql-panel-h', (newH/window.innerHeight*100).toFixed(1)+'vh');
+    };
+    const onEnd = () => {
+      handle.removeEventListener('touchmove', onMove);
+      handle.removeEventListener('touchend', onEnd);
+    };
+    handle.addEventListener('touchmove', onMove, {passive:true});
+    handle.addEventListener('touchend', onEnd);
+  }, {passive:true});
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -4308,8 +4368,9 @@ function showRegConfirmInSidebar(nr, toEmail, emailStatus) {
 }
 </script>
 
-<!-- ══ SQL VIEWER MODAL ══ -->
-<div id="sqlModal" class="sql-modal hidden" onclick="if(event.target===this)hideSqlViewer()">
+<!-- ══ SQL VIEWER — BOTTOM PANEL ══ -->
+<div id="sqlModal" class="hidden">
+  <div class="sql-resize-handle" id="sqlResizeHandle" title="Trage pentru a redimensiona"></div>
   <div class="sql-card">
     <div class="sql-topbar">
       <h3>🗄 Situație Beneficiari · SQL Server</h3>
