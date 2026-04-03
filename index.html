@@ -744,6 +744,8 @@ body.sql-panel-open .main{height:calc(var(--sql-panel-h, 46vh) * -1 + 100vh - 48
         <div class="ocr-section" id="ocrSection">
           <div id="ocrHint"></div>
         </div>
+        <!-- Rezultat cautare CNP in tabel — apare direct in sidebar -->
+        <div id="ocrCnpSearchResult" style="display:none;flex-shrink:0;padding:6px 12px;border-top:1px solid var(--border);font-size:11px"></div>
         <div class="ocr-actions-bar hidden" id="ocrActions">
           <button class="btn-insert" onclick="insertOCRToReply()">→ Inserează în reply</button>
         </div>
@@ -1985,12 +1987,25 @@ function clearPersistOcr() {
   document.getElementById('ocrPersistFields').innerHTML='';
   document.getElementById('ocrTableCard').style.display='none';
   document.getElementById('ocrTableCard').innerHTML='';
+  _setOcrSidebarResult('');
 }
 
 // ── Căutare automată CNP în tabelul SQL/Excel după OCR ──────
+function _setOcrSidebarResult(html, color) {
+  const el = document.getElementById('ocrCnpSearchResult');
+  if (!el) return;
+  el.style.display = html ? '' : 'none';
+  el.style.color = color || '';
+  el.innerHTML = html || '';
+}
+
 function _ocrSearchTable(cnp) {
   const card = document.getElementById('ocrTableCard');
-  if (!cnp || !_sqlAllRows.length) { card.style.display='none'; return; }
+  if (!cnp || !_sqlAllRows.length) {
+    if (card) card.style.display = 'none';
+    _setOcrSidebarResult('');
+    return;
+  }
   // Normalizare: păstrează doar cifre pentru comparare robustă
   // (SheetJS poate stoca CNP ca număr; OCR poate adăuga spații)
   const cnpStr    = String(cnp).trim();
@@ -2008,12 +2023,10 @@ function _ocrSearchTable(cnp) {
     _sqlColumns.some(c => cellMatchesCnp(row[c]))
   );
 
-  card.style.display = '';
   if (!hits.length) {
-    card.innerHTML = `<div class="ocr-tbl-card">
-      <div class="ocr-tbl-card-hdr"><span>🗄 Tabel</span></div>
-      <div class="ocr-tbl-not-found">CNP <b>${esc(cnpStr)}</b> negăsit în tabelul curent.</div>
-    </div>`;
+    // Mesaj vizibil direct în sidebar
+    _setOcrSidebarResult(`✕ CNP <b>${esc(cnpStr)}</b> — <i>negăsit în tabelul curent</i>`, 'var(--red)');
+    if (card) { card.style.display = 'none'; }
     return;
   }
 
@@ -2039,24 +2052,32 @@ function _ocrSearchTable(cnp) {
         ▼ ${hits.length} rânduri găsite — click pentru toate
        </div>` : '';
 
-  card.innerHTML = `<div class="ocr-tbl-card">
-    <div class="ocr-tbl-card-hdr">
-      <span>🗄 ${hits.length > 1 ? hits.length + ' rânduri' : 'Găsit în tabel'}</span>
-      <button onclick="ocrJumpToTable('${esc(cnpStr)}')" title="Deschide tabelul filtrat pe acest CNP">↗ Deschide tabel</button>
-    </div>
-    <div class="ocr-tbl-row" style="border-top:none">
-      <span class="ocr-tbl-lbl" style="color:var(--teal)">${esc(cnpCol||'CNP')}</span>
-      <span class="ocr-tbl-val" style="color:var(--teal);font-weight:700">${esc(cnpStr)}</span>
-    </div>
-    ${renderHit(hits[0])}
-    ${multiNote}
-  </div>`;
+  // Mesaj de succes vizibil direct în sidebar
+  _setOcrSidebarResult(
+    `✓ CNP găsit — <b>${hits.length}</b> ${hits.length === 1 ? 'rând' : 'rânduri'} · <a href="#" onclick="ocrJumpToTable('${esc(cnpStr)}');return false" style="color:var(--teal)">↗ deschide tabel</a>`,
+    'var(--green)'
+  );
 
-  // Store hits for expand
-  card._hits = hits;
-  card._cnpCol = cnpCol;
-  card._showCols = showCols;
-  card._cnpStr = cnpStr;
+  if (card) {
+    card.style.display = '';
+    card.innerHTML = `<div class="ocr-tbl-card">
+      <div class="ocr-tbl-card-hdr">
+        <span>🗄 ${hits.length > 1 ? hits.length + ' rânduri' : 'Găsit în tabel'}</span>
+        <button onclick="ocrJumpToTable('${esc(cnpStr)}')" title="Deschide tabelul filtrat pe acest CNP">↗ Deschide tabel</button>
+      </div>
+      <div class="ocr-tbl-row" style="border-top:none">
+        <span class="ocr-tbl-lbl" style="color:var(--teal)">${esc(cnpCol||'CNP')}</span>
+        <span class="ocr-tbl-val" style="color:var(--teal);font-weight:700">${esc(cnpStr)}</span>
+      </div>
+      ${renderHit(hits[0])}
+      ${multiNote}
+    </div>`;
+
+    card._hits = hits;
+    card._cnpCol = cnpCol;
+    card._showCols = showCols;
+    card._cnpStr = cnpStr;
+  }
 }
 
 function ocrShowAllHits() {
