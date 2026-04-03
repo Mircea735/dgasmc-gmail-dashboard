@@ -2598,46 +2598,80 @@ async function trashEmail(id) {
     alert('Eroare la ștergere: '+e.message);
   }
 }
-function showSentSector2() {
-  const sel = document.getElementById('labelSel');
-  // Selectează opțiunea Sector 2 dacă există, altfel rămâne pe toate
-  const opt = Array.from(sel.options).find(o => o.value === 'Sector 2');
-  if (opt) { sel.value = 'Sector 2'; }
-  // Schimbă query-ul să caute în SENT cu label Sector 2
-  const daysIn = document.getElementById('daysIn');
-  const days = parseInt(daysIn.value) || 7;
+async function showSentSector2() {
+  const days = parseInt(document.getElementById('daysIn').value) || 7;
   const after = new Date(Date.now()-days*86400000).toISOString().slice(0,10).replace(/-/g,'/');
   const list = document.getElementById('emailList');
-  list.innerHTML = '<div class="load-row"><div class="spinner"></div> Se încarcă trimise...</div>';
+  list.innerHTML = '<div class="load-row"><div class="spinner"></div> Se încarcă adrese Sector 2...</div>';
   document.getElementById('statsBar').style.display = 'none';
-  const q = encodeURIComponent(`in:sent after:${after}`);
-  api(`${BASE}/messages?q=${q}&maxResults=100`).then(async data => {
-    const msgs = data.messages || [];
-    if (!msgs.length) { list.innerHTML = '<div class="load-empty">Niciun email trimis găsit pentru Sector 2.</div>'; return; }
+
+  try {
+    // Pas 1: colectează adresele expeditorilor din inbox Sector 2
+    const inboxQ = encodeURIComponent(`label:Sector-2 after:${after}`);
+    const inboxData = await api(`${BASE}/messages?q=${inboxQ}&maxResults=200`);
+    const inboxMsgs = inboxData.messages || [];
+    if (!inboxMsgs.length) {
+      list.innerHTML = '<div class="load-empty">Niciun email primit pe Sector 2 în această perioadă.</div>';
+      return;
+    }
+    list.innerHTML = `<div class="load-row"><div class="spinner"></div> Procesez ${inboxMsgs.length} mesaje Sector 2...</div>`;
+
+    const sector2Addrs = new Set();
+    for (let i = 0; i < inboxMsgs.length; i += 8) {
+      const batch = await Promise.all(inboxMsgs.slice(i, i+8).map(m =>
+        api(`${BASE}/messages/${m.id}?format=metadata&metadataHeaders=From`)
+      ));
+      batch.forEach(md => {
+        const from = (md.payload?.headers||[]).find(h=>h.name==='From')?.value || '';
+        // extrage doar adresa din "Nume <adresa@dom>"
+        const match = from.match(/<([^>]+)>/) || from.match(/(\S+@\S+)/);
+        if (match) sector2Addrs.add(match[1].toLowerCase());
+      });
+    }
+
+    // Pas 2: emailuri trimise în aceeași perioadă
+    const sentQ = encodeURIComponent(`in:sent after:${after}`);
+    const sentData = await api(`${BASE}/messages?q=${sentQ}&maxResults=200`);
+    const sentMsgs = sentData.messages || [];
+
     const meta = [];
-    for (let i = 0; i < msgs.length; i += 8) {
-      const batch = await Promise.all(msgs.slice(i, i+8).map(m =>
+    for (let i = 0; i < sentMsgs.length; i += 8) {
+      const batch = await Promise.all(sentMsgs.slice(i, i+8).map(m =>
         api(`${BASE}/messages/${m.id}?format=metadata&metadataHeaders=To&metadataHeaders=Subject&metadataHeaders=Date`)
       ));
       meta.push(...batch);
     }
-    meta.sort((a,b) => parseInt(b.internalDate)-parseInt(a.internalDate));
-    list.innerHTML = meta.map(md => {
-      const h = Object.fromEntries((md.payload?.headers||[]).map(x=>[x.name,x.value]));
-      const snip = (md.snippet||'').toLowerCase();
-      const isConf = snip.includes('numărul de înregistrare')||/r\d+\/\d+\//.test(snip)||_confirmedSentIds.has(md.id);
-      return `<div class="erow" onclick="viewEmail('${md.id}')">
-        <div class="erow-top">
-          <span class="erow-from" style="color:var(--text2)">→ ${esc(h.To||'')}</span>
-          <span class="erow-date">${fmtDate(parseInt(md.internalDate))}</span>
-        </div>
-        <div class="erow-subj">${esc(h.Subject||'(fără subiect)')}${isConf?' <span style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;border-radius:3px;padding:0 4px;font-size:10px;font-weight:600">📊</span>':''}</div>
-        <div class="erow-snip">${esc(md.snippet||'')}</div>
-      </div>`;
-    }).join('');
-  }).catch(e => {
+
+    // Pas 3: filtrează trimisele către adrese din Sector 2
+    const filtered = meta.filter(md => {
+      const to = (md.payload?.headers||[]).find(h=>h.name==='To')?.value || '';
+      const toAddr = (to.match(/<([^>]+)>/) || to.match(/(\S+@\S+)/) || [])[1] || to;
+      return sector2Addrs.has(toAddr.toLowerCase());
+    });
+
+    if (!filtered.length) {
+      list.innerHTML = '<div class="load-empty">Niciun email trimis către expeditori Sector 2 în această perioadă.</div>';
+      return;
+    }
+
+    filtered.sort((a,b) => parseInt(b.internalDate)-parseInt(a.internalDate));
+    list.innerHTML = `<div style="padding:4px 12px;font-size:10px;color:var(--text3);border-bottom:1px solid var(--border)">📤 ${filtered.length} trimise către adrese Sector 2 (${days} zile)</div>` +
+      filtered.map(md => {
+        const h = Object.fromEntries((md.payload?.headers||[]).map(x=>[x.name,x.value]));
+        const snip = (md.snippet||'').toLowerCase();
+        const isConf = snip.includes('numărul de înregistrare')||/r\d+\/\d+\//.test(snip)||_confirmedSentIds.has(md.id);
+        return `<div class="erow" onclick="viewEmail('${md.id}')">
+          <div class="erow-top">
+            <span class="erow-from" style="color:var(--text2)">→ ${esc(h.To||'')}</span>
+            <span class="erow-date">${fmtDate(parseInt(md.internalDate))}</span>
+          </div>
+          <div class="erow-subj">${esc(h.Subject||'(fără subiect)')}${isConf?' <span style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;border-radius:3px;padding:0 4px;font-size:10px;font-weight:600">📊</span>':''}</div>
+          <div class="erow-snip">${esc(md.snippet||'')}</div>
+        </div>`;
+      }).join('');
+  } catch(e) {
     list.innerHTML = `<div class="load-empty" style="color:var(--red)">✕ ${esc(e.message)}</div>`;
-  });
+  }
 }
 
 function composeNew() {
