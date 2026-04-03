@@ -2722,7 +2722,7 @@ function syncDocOptInput() {
     const regNr = (SHEET_NAME.match(/\b(\d{2,})\b/)||[])[1] || '';
     const rPrefix = regNr ? `R${regNr}` : 'R';
     const data = document.getElementById('regData').value || '';
-    const indicativ = [rPrefix, nr, checked.join(', '), data].filter(Boolean).join('.');
+    const indicativ = [rPrefix, nr, data, checked.join(', ')].filter(Boolean).join('.');
     const atasEl = document.getElementById('regAtas');
     atasEl.value = indicativ;
     // Evidențiere verde — valoare sugerată automat
