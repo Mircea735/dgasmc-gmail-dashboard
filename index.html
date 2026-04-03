@@ -283,6 +283,22 @@ button,input,select,textarea{font-family:var(--sans);}
 .ocr-tbl-val{color:var(--text);font-family:var(--mono);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .ocr-tbl-not-found{color:var(--text3);font-size:10px;font-style:italic;padding:3px 0;}
 .ocr-tbl-multi{font-size:9px;color:var(--text3);margin-top:3px;cursor:pointer;color:var(--accent);}
+/* ── ISTORIC MODAL ── */
+#istoricModal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;display:flex;align-items:center;justify-content:center;}
+#istoricModal.hidden{display:none!important;}
+.istoric-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;width:900px;max-width:97vw;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.3);overflow:hidden;}
+.istoric-toolbar{display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.istoric-toolbar h3{font-size:13px;font-weight:600;color:#0891b2;margin:0;white-space:nowrap;}
+.istoric-search{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:11px;padding:4px 9px;border-radius:4px;width:200px;outline:none;}
+.istoric-search:focus{border-color:var(--accent);}
+.istoric-body{flex:1;overflow:auto;padding:0;}
+.istoric-table{width:100%;border-collapse:collapse;font-size:11px;}
+.istoric-table th{background:var(--surface2);padding:5px 10px;text-align:left;border-bottom:2px solid var(--border);white-space:nowrap;color:var(--text3);font-size:10px;position:sticky;top:0;z-index:1;}
+.istoric-table td{padding:4px 10px;border-bottom:1px solid var(--surface2);white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis;vertical-align:middle;}
+.istoric-table tr:hover td{background:var(--surface2);}
+.istoric-table tr.today td{background:rgba(6,182,212,.06);}
+.istoric-status{padding:6px 14px;font-size:10px;color:var(--text3);border-top:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:10px;}
+
 /* CNP Popup Card */
 #cnpPopupOverlay{position:fixed;bottom:16px;right:16px;z-index:600;width:420px;max-width:96vw;}
 #cnpPopupOverlay.hidden{display:none!important;}
@@ -617,6 +633,7 @@ body.sql-panel-open .main{height:calc(var(--sql-panel-h, 46vh) * -1 + 100vh - 48
       <span class="token-warn hidden" id="tokenWarn" onclick="requestToken()">⚠ Sesiune expirată</span>
       <button class="tb-btn" onclick="composeNew()" title="Email nou" style="background:rgba(34,197,94,.08);border-color:#22c55e;color:#22c55e">✉ Email nou</button>
       <button class="tb-btn" onclick="showRegistruViewer()" title="Vizualizează Registrul R43/2026" style="background:rgba(37,99,235,.1);border-color:var(--accent);color:var(--accent)">📊 Registru</button>
+      <button class="tb-btn" onclick="showIstoricModal()" title="Istoric trimiteri confirmare (Apps Script)" style="background:rgba(6,182,212,.1);border-color:#0891b2;color:#0891b2">📜 Istoric</button>
       <button class="tb-btn" onclick="showSqlViewer()" title="Situație beneficiari SQL Server" style="background:rgba(15,118,110,.1);border-color:var(--teal);color:var(--teal)">🗄 SQL</button>
       <button id="xlsLoadedBadge" onclick="showSqlViewer()" title="Date Excel încărcate — click pentru vizualizare" style="display:none;background:rgba(15,118,110,.12);border-color:var(--teal);color:var(--teal);font-size:11px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" class="tb-btn"></button>
       <button class="tb-btn" onclick="showDriveModal()" title="Fișiere Google Drive" style="background:rgba(234,179,8,.1);border-color:#ca8a04;color:#ca8a04">📁 Drive</button>
@@ -3492,6 +3509,75 @@ function updateMiniStats() {
 }
 
 // ══════════════════════════════════════════════════════════
+// ISTORIC VIEWER
+// ══════════════════════════════════════════════════════════
+const ISTORIC_SHEET = 'ISTORIC'; // numele sheet-ului din Sheets
+let _istoricAllRows = [], _istoricHeaders = [];
+
+async function showIstoricModal() {
+  document.getElementById('istoricModal').classList.remove('hidden');
+  if (!_istoricAllRows.length) await refreshIstoric();
+}
+
+function hideIstoricModal() {
+  document.getElementById('istoricModal').classList.add('hidden');
+}
+
+async function refreshIstoric() {
+  const body = document.getElementById('istoricBody');
+  const status = document.getElementById('istoricStatus');
+  body.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3)"><div class="spinner"></div> Se încarcă...</div>';
+  document.getElementById('istoricCount').textContent = '';
+  try {
+    const range = encodeURIComponent(`'${ISTORIC_SHEET}'!A1:Z`);
+    const url = `${SHEETS_BASE}/${SHEETS_ID}/values/${range}`;
+    const data = await api(url);
+    const rows = data.values || [];
+    if (!rows.length) { body.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3)">Sheet-ul ISTORIC este gol sau nu există.</div>'; return; }
+    _istoricHeaders = rows[0];
+    _istoricAllRows = rows.slice(1);
+    document.getElementById('istoricSheetName').textContent = `Sheet: ${ISTORIC_SHEET} · ${SHEETS_ID.slice(0,16)}…`;
+    const now = new Date();
+    document.getElementById('istoricLastLoad').textContent = `Actualizat: ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    renderIstoric(_istoricAllRows);
+  } catch(e) {
+    body.innerHTML = `<div style="padding:30px;color:var(--red);font-size:12px">✕ ${esc(e.message)}<br><br><small>Verifică că sheet-ul se numește exact „ISTORIC" și că ai acces.</small></div>`;
+  }
+}
+
+function renderIstoric(rows) {
+  const body = document.getElementById('istoricBody');
+  const count = document.getElementById('istoricCount');
+  count.textContent = `${rows.length} înregistrări`;
+
+  if (!rows.length) { body.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3)">Niciun rezultat.</div>'; return; }
+
+  const today = new Date();
+  const todayStr = `${String(today.getDate()).padStart(2,'0')}.${String(today.getMonth()+1).padStart(2,'0')}.${today.getFullYear()}`;
+
+  const sheetsBadge = '<span style="display:inline-flex;align-items:center;gap:3px;background:#dcfce7;color:#166534;border:1px solid #bbf7d0;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:600;white-space:nowrap">📤 Sheets</span>';
+  const thead = `<thead><tr><th style="width:80px">Sursă</th>${_istoricHeaders.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead>`;
+  // Afișează ultimele rânduri primele (invers)
+  const tbody = '<tbody>' + [...rows].reverse().map(row => {
+    const isToday = row.some(v => String(v||'').includes(todayStr));
+    return `<tr${isToday?' class="today"':''}>` +
+      `<td style="text-align:center">${sheetsBadge}</td>` +
+      _istoricHeaders.map((_,i) => `<td title="${esc(String(row[i]||''))}">${esc(String(row[i]||''))}</td>`).join('') +
+      '</tr>';
+  }).join('') + '</tbody>';
+
+  body.innerHTML = `<table class="istoric-table">${thead}${tbody}</table>`;
+}
+
+function filterIstoric(q) {
+  if (!q.trim()) { renderIstoric(_istoricAllRows); return; }
+  const ql = q.toLowerCase();
+  const filtered = _istoricAllRows.filter(row => row.some(v => String(v||'').toLowerCase().includes(ql)));
+  renderIstoric(filtered);
+  document.getElementById('istoricCount').textContent = `${filtered.length} / ${_istoricAllRows.length}`;
+}
+
+// ══════════════════════════════════════════════════════════
 // GOOGLE DRIVE BROWSER
 // ══════════════════════════════════════════════════════════
 let _driveStack = []; // [{id, name}] — istoric navigare
@@ -5249,6 +5335,31 @@ function showRegConfirmInSidebar(nr, toEmail, emailStatus) {
 
 <!-- ══════════════════════════════════════════════════════════════ -->
 <!-- RAPORT JURIDIC MODAL                                          -->
+<!-- ══ ISTORIC MODAL ════════════════════════════════════════════ -->
+<div id="istoricModal" class="hidden" onclick="if(event.target===this)hideIstoricModal()">
+  <div class="istoric-panel">
+    <div class="istoric-toolbar">
+      <h3>📜 Istoric trimiteri</h3>
+      <input type="search" class="istoric-search" id="istoricSearch" placeholder="🔍 Caută..."
+        oninput="filterIstoric(this.value)">
+      <span id="istoricCount" style="font-size:11px;color:var(--text3);white-space:nowrap"></span>
+      <button class="tb-btn" onclick="refreshIstoric()" title="Reîncarcă">↺ Refresh</button>
+      <button class="tb-btn" style="margin-left:auto" onclick="hideIstoricModal()">✕</button>
+    </div>
+    <div class="istoric-body" id="istoricBody">
+      <div style="padding:40px;text-align:center;color:var(--text3)">Se încarcă...</div>
+    </div>
+    <div class="istoric-status" id="istoricStatus">
+      <span id="istoricSheetName" style="font-family:var(--mono);font-size:10px;color:var(--text3)"></span>
+      <span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--text3)">
+        <span style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;border-radius:3px;padding:0 5px;font-weight:600">📤 Sheets</span>
+        = trimis via Apps Script
+      </span>
+      <span id="istoricLastLoad"></span>
+    </div>
+  </div>
+</div>
+
 <!-- ══ CNP POPUP CARD ════════════════════════════════════════════ -->
 <div id="cnpPopupOverlay" class="hidden">
   <div class="cnp-popup">
