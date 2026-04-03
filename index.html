@@ -1140,10 +1140,10 @@ function buildMime({to,subject,body,inReplyTo,files}) {
 // ══════════════════════════════════════════════════════════
 // APP INIT
 // ══════════════════════════════════════════════════════════
-function appInit() {
+async function appInit() {
   loadCustomTemplates();
   renderTemplates(TEMPLATES);
-  loadLabels();
+  await loadLabels();
   loadEmails();
 }
 
