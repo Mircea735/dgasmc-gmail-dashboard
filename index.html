@@ -3149,9 +3149,9 @@ async function showRegModal() {
   const yyyy=today.getFullYear();
   document.getElementById('regData').value=`${dd}.${mm}.${yyyy}`;
   document.getElementById('regStatus').textContent='';
-  // Restaurează preferința trimitere confirmare (default: da)
+  // Restaurează preferința trimitere confirmare (default: NU — Sheets/Apps Script trimite)
   const savedConfirm = localStorage.getItem('sendConfirmEmail');
-  document.getElementById('chkSendConfirm').checked = savedConfirm !== '0';
+  document.getElementById('chkSendConfirm').checked = savedConfirm === '1';
   document.getElementById('regObs').value='';
   document.getElementById('regPreviewCol').classList.remove('visible');
   const _btnReg=document.getElementById('btnDoRegister');
@@ -5219,7 +5219,7 @@ function showRegConfirmInSidebar(nr, toEmail, emailStatus) {
       <div class="reg-status" id="regStatus"></div>
       <div style="padding:4px 0 6px;display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text3)">
         <label style="display:flex;align-items:center;gap:5px;cursor:pointer;user-select:none">
-          <input type="checkbox" id="chkSendConfirm" checked
+          <input type="checkbox" id="chkSendConfirm"
             onchange="localStorage.setItem('sendConfirmEmail',this.checked?'1':'0')"
             style="accent-color:var(--teal);width:14px;height:14px">
           Trimite confirmare email din dashboard
