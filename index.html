@@ -2714,19 +2714,20 @@ function syncDocOptInput() {
     .map(el=>el.dataset.docopt);
   document.getElementById('regContinut').value = checked.join(', ');
   document.getElementById('regContinutSel').textContent = checked.length ? `(${checked.length} bifate)` : '';
-  // Auto-fill attachment name: {indicativ}/{doc_types}.pdf
-  // Indicativul = Nr.crt/Data (coloana G din Sheets = concat A+E)
+  // Auto-fill attachment name: R{reg}.{nr}.{tipuri}
+  // Format: R43.927.CH, C Deces  (fara extensie — e denumire logistica, nu fisier)
   if(checked.length) {
-    const nr   = document.getElementById('regNextNr').dataset.nr || '';
-    const data = document.getElementById('regData').value || '';
-    const indicativ = (nr && data) ? `${nr}/${data}` : (nr || data);
-    const prefix = indicativ ? `${indicativ}_` : '';
+    const nr  = document.getElementById('regNextNr').dataset.nr || '';
+    // Extrage numarul registrului din SHEET_NAME (ex: "Registru E mail 43 2026" → 43)
+    const regNr = (SHEET_NAME.match(/\b(\d{2,})\b/)||[])[1] || '';
+    const rPrefix = regNr ? `R${regNr}` : 'R';
+    const indicativ = [rPrefix, nr, checked.join(', ')].filter(Boolean).join('.');
     const atasEl = document.getElementById('regAtas');
-    atasEl.value = `${prefix}${checked.join(', ')}.pdf`;
+    atasEl.value = indicativ;
     // Evidențiere verde — valoare sugerată automat
     atasEl.style.borderColor = 'var(--green)';
     atasEl.style.background  = 'rgba(22,163,74,.07)';
-    atasEl.title = `Sugerat automat: indicativ ${indicativ || '—'} + tipuri documente`;
+    atasEl.title = `Sugerat: ${indicativ}  (R${regNr} = registru, ${nr} = nr.înreg., tipuri doc.)`;
   }
   // Sync attachment rename field with checked doc type names
   syncAttRenameFromReg();
