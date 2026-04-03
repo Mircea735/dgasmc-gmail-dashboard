@@ -2736,9 +2736,9 @@ async function showSentSector2() {
         <div class="sent-group-hdr" onclick="this.parentElement.classList.toggle('open')">
           <span class="sent-group-arrow">▶</span>
           <span class="sent-group-addr">${isReg?'📋 ':''}${esc(g.display||g.addr)}</span>
-          <span style="font-size:10px;color:var(--text3);margin-left:4px">${esc(g.addr)}</span>
-          <span style="margin-left:auto;display:flex;gap:4px;align-items:center">
-            ${confCount?`<span style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;border-radius:3px;padding:0 5px;font-size:10px;font-weight:600">📊 ${confCount}</span>`:''}
+          ${confCount?`<span style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;border-radius:3px;padding:0 5px;font-size:10px;font-weight:600">📊</span>`:''}
+          <span style="font-size:10px;color:var(--text3);margin-left:2px">${esc(g.addr)}</span>
+          <span style="margin-left:auto">
             <span style="background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:0 6px;font-size:10px;color:var(--text2)">${g.msgs.length} email${g.msgs.length>1?'uri':''}</span>
           </span>
         </div>
