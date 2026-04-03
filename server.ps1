@@ -189,6 +189,62 @@ poll();
             $res.ContentLength64 = $content.Length
             $res.OutputStream.Write($content, 0, $content.Length)
 
+        } elseif ($req.Url.AbsolutePath -eq '/api/pq') {
+            # Citește tabela Power Query din Excel-ul deschis via COM
+            try {
+                $ms = New-Object System.IO.MemoryStream
+                $req.InputStream.CopyTo($ms)
+                $bodyStr = [System.Text.Encoding]::UTF8.GetString($ms.ToArray())
+                $payload = $bodyStr | ConvertFrom-Json
+                $tableName = $payload.table
+                if (-not $tableName) { throw "Lipseste numele tabelei (table)" }
+
+                $xl = [System.Runtime.InteropServices.Marshal]::GetActiveObject('Excel.Application')
+                if (-not $xl) { throw "Excel nu este deschis" }
+
+                # Cauta tabela in toate workbook-urile deschise
+                $found = $null
+                foreach ($wb in $xl.Workbooks) {
+                    foreach ($ws in $wb.Worksheets) {
+                        foreach ($lo in $ws.ListObjects) {
+                            if ($lo.Name -eq $tableName) { $found = $lo; break }
+                        }
+                        if ($found) { break }
+                    }
+                    if ($found) { break }
+                }
+                if (-not $found) { throw "Tabela '$tableName' nu a fost gasita in Excel" }
+
+                $range = $found.Range
+                $rows = @()
+                $headers = @()
+                $headerRow = $found.HeaderRowRange
+                for ($c = 1; $c -le $headerRow.Columns.Count; $c++) {
+                    $headers += $headerRow.Cells.Item(1, $c).Text
+                }
+                $dataRange = $found.DataBodyRange
+                if ($dataRange) {
+                    for ($r = 1; $r -le $dataRange.Rows.Count; $r++) {
+                        $obj = @{}
+                        for ($c = 1; $c -le $dataRange.Columns.Count; $c++) {
+                            $obj[$headers[$c-1]] = $dataRange.Cells.Item($r, $c).Text
+                        }
+                        $rows += $obj
+                    }
+                }
+                $jss = New-Object System.Web.Script.Serialization.JavaScriptSerializer
+                $jss.MaxJsonLength = 104857600
+                $json = $jss.Serialize(@{ rows = $rows; count = $rows.Count; columns = $headers })
+                $b = (New-Object System.Text.UTF8Encoding $false).GetBytes($json)
+                $res.ContentType = 'application/json; charset=utf-8'
+                $res.ContentLength64 = $b.Length; $res.OutputStream.Write($b, 0, $b.Length)
+            } catch {
+                $safeMsg = $_.Exception.Message -replace '\\','\\' -replace '"','\"'
+                $e = (New-Object System.Text.UTF8Encoding $false).GetBytes('{"error":"' + $safeMsg + '"}')
+                $res.StatusCode = 500; $res.ContentType = 'application/json; charset=utf-8'
+                $res.ContentLength64 = $e.Length; $res.OutputStream.Write($e, 0, $e.Length)
+            }
+
         } elseif ($req.Url.AbsolutePath -eq '/api/sql-ping') {
             $psVer = $PSVersionTable.PSVersion.ToString()
             $hasSqlClient = $null -ne ([System.AppDomain]::CurrentDomain.GetAssemblies() | Where-Object { try { $_.GetType('System.Data.SqlClient.SqlConnection') -ne $null } catch { $false } } | Select-Object -First 1)

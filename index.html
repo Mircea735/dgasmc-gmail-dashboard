@@ -4799,6 +4799,40 @@ function saveSqlSettings() {
   loadSqlData();
 }
 
+let _pqLiveTimer = null;
+async function loadPqLive() {
+  const table = localStorage.getItem('sqlViewName') || 'PowerQuery_Fisiere';
+  const body = document.getElementById('sqlBody');
+  body.innerHTML = '<div class="load-row"><div class="spinner"></div> Se citește din Excel PQ Live...</div>';
+  try {
+    const resp = await fetch('/api/pq', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({table})
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    _sqlAllRows = data.rows || [];
+    _sqlColumns = data.columns || [];
+    _sqlSortCol = ''; _sqlSource = 'pq'; _sqlViewMode = 'table';
+    renderSqlTable(_sqlAllRows);
+    _setSrcBadge('pq');
+    document.getElementById('sqlCount').textContent = `${_sqlAllRows.length} înregistrări`;
+    document.getElementById('sqlFooterInfo').textContent = `⚡ PQ Live · ${table} · ${_sqlAllRows.length} rânduri`;
+    const now = new Date();
+    document.getElementById('sqlLastLoad').textContent = `Actualizat: ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    // Auto-refresh la 15 minute (sincron cu rata PQ)
+    if (_pqLiveTimer) clearInterval(_pqLiveTimer);
+    _pqLiveTimer = setInterval(loadPqLive, 15 * 60 * 1000);
+  } catch(e) {
+    body.innerHTML = `<div class="load-row" style="color:var(--red);padding:40px;flex-direction:column;gap:8px">
+      <div style="font-size:16px">✕ PQ Live eroare</div>
+      <div style="font-size:11px;font-family:var(--mono)">${esc(e.message)}</div>
+      <div style="font-size:11px;color:var(--text3)">Asigură-te că Excel e deschis cu tabela „${esc(table)}"</div>
+    </div>`;
+  }
+}
+
 async function loadSqlData() {
   const conn = _sqlConn();
   const query = _sqlQuery();
@@ -5375,6 +5409,7 @@ function showRegConfirmInSidebar(nr, toEmail, emailStatus) {
         📂 Excel
         <input type="file" id="sqlXlsInput" accept=".xlsx,.xls,.csv,.ods" style="display:none" onchange="importExcelFile(this)">
       </label>
+      <button class="tb-btn" onclick="loadPqLive()" title="Citește tabela Power Query din Excel deschis" style="border-color:#8b5cf6;color:#8b5cf6">⚡ PQ Live</button>
       <button class="tb-btn" onclick="promoteFirstRowAsHeader()" id="btnPromoteHeader" style="display:none;border-color:#f59e0b;color:#f59e0b" title="Tratează primul rând de date ca header de coloane">▲ Rând 1 → Header</button>
       <button class="tb-btn" onclick="showSumarPanel()" id="btnSumar" style="display:none;border-color:var(--purple);color:var(--purple)">📋 Sumar</button>
       <button class="tb-btn" onclick="showAqModal()" id="btnAq" style="display:none;border-color:#06b6d4;color:#06b6d4">🔬 Analiză</button>
