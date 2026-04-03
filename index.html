@@ -3690,7 +3690,7 @@ async function driveAttach(fileId, name, mime) {
     const base64 = btoa(binary);
     // Adaugă în lista de atașamente compose
     attachedFiles.push({ name, type: mime, data: base64 });
-    _renderFileAttachRow();
+    renderFileChips();
     status.textContent = `✓ Atașat: ${name}`;
     hideDriveModal();
   } catch(e) {
