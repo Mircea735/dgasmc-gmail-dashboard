@@ -896,6 +896,7 @@ let attSelectedDocTypes={}; // { attachmentId: doctype string }
 let _curPickerAttId=null, _curPickerMsgId=null, _curPickerFilename='', _curPickerMime='', _curPickerSize=0;
 let _emailsWithAtts=new Set(); // email IDs seen with attachments
 let _emailsRegistered=new Set(); // email IDs registered this session
+let _confirmedSentIds=new Set(); // SENT msg IDs ce contin confirmare inregistrare
 let _composeMode=false; // true = new email, not a reply
 let persistOcrData=null, curEmailMeta=null;
 let _lastSenderEmail='', _lastSenderName='', _lastThreadId='', _lastMsgId='', _lastSubject='';
@@ -1146,6 +1147,7 @@ async function appInit() {
   renderTemplates(TEMPLATES);
   await loadLabels();
   loadEmails();
+  loadConfirmedSentIds(); // background — nu blochez
 }
 
 // ══════════════════════════════════════════════════════════
@@ -1183,6 +1185,15 @@ async function loadLabels() {
     grpUser.appendChild(o);
   }
   sel.appendChild(grpUser);
+}
+
+// Populează _confirmedSentIds cu mesaje din SENT ce conțin confirmare înregistrare
+async function loadConfirmedSentIds() {
+  try {
+    const q = encodeURIComponent('in:sent "numărul de înregistrare"');
+    const data = await api(`${BASE}/messages?q=${q}&maxResults=200`);
+    (data.messages||[]).forEach(m => _confirmedSentIds.add(m.id));
+  } catch(e) { /* silentios — nu blocheaza nimic */ }
 }
 
 // ══════════════════════════════════════════════════════════
@@ -2670,7 +2681,7 @@ async function loadHistory(contactEmail, currentId) {
       const isSent=(md.labelIds||[]).includes('SENT');
       const isCurrent=md.id===currentId;
       const snip=(md.snippet||'').toLowerCase();
-      const isSheetsSent=isSent&&(snip.includes('numărul de înregistrare')||/r\d+\/\d+\//.test(snip)||_emailsRegistered.has(md.id));
+      const isSheetsSent=isSent&&(snip.includes('numărul de înregistrare')||/r\d+\/\d+\//.test(snip)||_emailsRegistered.has(md.id)||_confirmedSentIds.has(md.id));
       const sheetsBadge=isSheetsSent?'<span class="sheets-flag" title="Confirmare înregistrare via Sheets">📊</span>':'';
       return `<div class="hitem ${isCurrent?'is-current':''}" onclick="viewEmail('${md.id}')">
         <div class="hi-top">
