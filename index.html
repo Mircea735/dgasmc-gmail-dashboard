@@ -478,6 +478,31 @@ body.sql-panel-open .main{height:calc(var(--sql-panel-h, 46vh) * -1 + 100vh - 48
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
 
+/* ── DRIVE BROWSER MODAL ── */
+#driveModal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;display:flex;align-items:center;justify-content:center;}
+#driveModal.hidden{display:none!important;}
+.drive-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;width:720px;max-width:96vw;max-height:86vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.3);}
+.drive-toolbar{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.drive-toolbar h3{font-size:13px;font-weight:600;color:#ca8a04;margin:0;}
+.drive-breadcrumb{display:flex;align-items:center;gap:4px;flex:1;font-size:11px;flex-wrap:wrap;overflow:hidden;}
+.drive-crumb{color:var(--accent);cursor:pointer;white-space:nowrap;}
+.drive-crumb:hover{text-decoration:underline;}
+.drive-crumb-sep{color:var(--text3);}
+.drive-search{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:11px;padding:4px 9px;border-radius:4px;width:180px;outline:none;}
+.drive-search:focus{border-color:var(--accent);}
+.drive-list{flex:1;overflow-y:auto;padding:6px 0;}
+.drive-item{display:flex;align-items:center;gap:10px;padding:6px 14px;cursor:pointer;border-bottom:1px solid transparent;font-size:12px;}
+.drive-item:hover{background:var(--surface2);}
+.drive-item-icon{font-size:16px;flex-shrink:0;width:22px;text-align:center;}
+.drive-item-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.drive-item-meta{font-size:10px;color:var(--text3);font-family:var(--mono);white-space:nowrap;}
+.drive-item-actions{display:flex;gap:4px;flex-shrink:0;}
+.drive-act-btn{font-size:10px;padding:2px 7px;border-radius:3px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;white-space:nowrap;}
+.drive-act-btn:hover{border-color:var(--accent);color:var(--accent);}
+.drive-act-btn.green{border-color:var(--teal);color:var(--teal);}
+.drive-act-btn.green:hover{background:rgba(15,118,110,.1);}
+.drive-status{padding:8px 14px;font-size:11px;color:var(--text3);border-top:1px solid var(--border);flex-shrink:0;}
+
 /* ── MINI STATS STRIP (bottom of inbox) ── */
 .mini-stats-strip{flex-shrink:0;border-top:1px solid var(--border);background:var(--surface);padding:7px 10px;display:flex;flex-direction:column;gap:3px;}
 .mss-title{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;}
@@ -575,6 +600,7 @@ body.sql-panel-open .main{height:calc(var(--sql-panel-h, 46vh) * -1 + 100vh - 48
       <button class="tb-btn" onclick="showRegistruViewer()" title="Vizualizează Registrul R43/2026" style="background:rgba(37,99,235,.1);border-color:var(--accent);color:var(--accent)">📊 Registru</button>
       <button class="tb-btn" onclick="showSqlViewer()" title="Situație beneficiari SQL Server" style="background:rgba(15,118,110,.1);border-color:var(--teal);color:var(--teal)">🗄 SQL</button>
       <button id="xlsLoadedBadge" onclick="showSqlViewer()" title="Date Excel încărcate — click pentru vizualizare" style="display:none;background:rgba(15,118,110,.12);border-color:var(--teal);color:var(--teal);font-size:11px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" class="tb-btn"></button>
+      <button class="tb-btn" onclick="showDriveModal()" title="Fișiere Google Drive" style="background:rgba(234,179,8,.1);border-color:#ca8a04;color:#ca8a04">📁 Drive</button>
       <button class="tb-btn" onclick="showRaportModal()" title="Generator Rapoarte Juridice" style="background:rgba(168,85,247,.1);border-color:#a855f7;color:#a855f7">⚖ Raport</button>
       <a href="/bi" target="_blank" class="tb-btn" title="Analytics Dashboard" style="background:rgba(6,182,212,.1);border-color:#06b6d4;color:#06b6d4;text-decoration:none">📈 Analytics</a>
       <button class="tb-btn" onclick="resetSetup()" title="Setări">⚙</button>
@@ -782,11 +808,12 @@ body.sql-panel-open .main{height:calc(var(--sql-panel-h, 46vh) * -1 + 100vh - 48
 // ══════════════════════════════════════════════════════════
 // CONSTANTS
 // ══════════════════════════════════════════════════════════
-const SCOPES = 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/spreadsheets';
+const SCOPES = 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.readonly';
 const BASE   = 'https://gmail.googleapis.com/gmail/v1/users/me';
 const CLAUDE = 'https://api.anthropic.com/v1/messages';
 const SHEETS_ID   = '1xFTA80PFIlByy29dBTNfcgeJn9FOXmeEOLCi18Gy6hs';
 const SHEETS_BASE = 'https://sheets.googleapis.com/v4/spreadsheets';
+const DRIVE_BASE  = 'https://www.googleapis.com/drive/v3';
 const SHEET_NAME  = 'Registru E mail 43 2026';
 
 const HEADER = `Stimată(e) doamnă/domnule,\n\n`;
@@ -3362,6 +3389,228 @@ function updateMiniStats() {
 }
 
 // ══════════════════════════════════════════════════════════
+// GOOGLE DRIVE BROWSER
+// ══════════════════════════════════════════════════════════
+let _driveStack = []; // [{id, name}] — istoric navigare
+let _driveSearchT = null;
+
+function showDriveModal() {
+  document.getElementById('driveModal').classList.remove('hidden');
+  if (!_driveStack.length) _driveStack = [{ id: 'root', name: 'My Drive' }];
+  _driveLoadFolder(_driveStack[_driveStack.length - 1].id);
+}
+
+function hideDriveModal() {
+  document.getElementById('driveModal').classList.add('hidden');
+}
+
+async function _driveLoadFolder(folderId) {
+  const list = document.getElementById('driveList');
+  const status = document.getElementById('driveStatus');
+  list.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3)"><div class="spinner"></div> Se încarcă...</div>';
+  _driveRenderBreadcrumb();
+  try {
+    const q = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
+    const fields = encodeURIComponent('files(id,name,mimeType,size,modifiedTime,shortcutDetails)');
+    const url = `${DRIVE_BASE}/files?q=${q}&fields=${fields}&orderBy=folder,name&pageSize=200`;
+    const data = await api(url);
+    const files = data.files || [];
+    status.textContent = `${files.length} element${files.length !== 1 ? 'e' : ''}`;
+    list.innerHTML = files.length ? files.map(f => _driveItemHtml(f)).join('') : '<div style="padding:40px;text-align:center;color:var(--text3)">Dosar gol</div>';
+  } catch(e) {
+    list.innerHTML = `<div style="padding:30px;color:var(--red);font-size:12px">✕ ${esc(e.message)}</div>`;
+    status.textContent = '';
+  }
+}
+
+async function driveSearch(q) {
+  if (!q) { _driveLoadFolder(_driveStack[_driveStack.length - 1].id); return; }
+  const list = document.getElementById('driveList');
+  const status = document.getElementById('driveStatus');
+  list.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3)"><div class="spinner"></div> Se caută...</div>';
+  try {
+    const query = encodeURIComponent(`name contains '${q.replace(/'/g,"\\'")}' and trashed = false`);
+    const fields = encodeURIComponent('files(id,name,mimeType,size,modifiedTime)');
+    const url = `${DRIVE_BASE}/files?q=${query}&fields=${fields}&orderBy=name&pageSize=100`;
+    const data = await api(url);
+    const files = data.files || [];
+    status.textContent = `${files.length} rezultat${files.length !== 1 ? 'e' : ''} pentru „${q}"`;
+    list.innerHTML = files.length ? files.map(f => _driveItemHtml(f)).join('') : `<div style="padding:40px;text-align:center;color:var(--text3)">Niciun rezultat pentru „${esc(q)}"</div>`;
+  } catch(e) {
+    list.innerHTML = `<div style="padding:30px;color:var(--red);font-size:12px">✕ ${esc(e.message)}</div>`;
+  }
+}
+
+function _driveMimeIcon(mime) {
+  if (mime === 'application/vnd.google-apps.folder') return '📁';
+  if (mime.includes('spreadsheet') || mime.includes('excel') || mime.includes('xlsx')) return '📗';
+  if (mime.includes('pdf')) return '📄';
+  if (mime.startsWith('image/')) return '🖼';
+  if (mime.includes('document') || mime.includes('word')) return '📝';
+  if (mime.includes('presentation') || mime.includes('powerpoint')) return '📊';
+  return '📃';
+}
+
+function _driveFormatSize(bytes) {
+  if (!bytes) return '';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return Math.round(bytes / 1024) + ' KB';
+  return (bytes / 1048576).toFixed(1) + ' MB';
+}
+
+function _driveItemHtml(f) {
+  const isFolder = f.mimeType === 'application/vnd.google-apps.folder';
+  const isExcel  = f.mimeType.includes('spreadsheet') || f.name.match(/\.(xlsx|xls|ods|csv)$/i);
+  const isGSheet = f.mimeType === 'application/vnd.google-apps.spreadsheet';
+  const isPdf    = f.mimeType === 'application/pdf';
+  const isImage  = f.mimeType.startsWith('image/');
+  const icon = _driveMimeIcon(f.mimeType);
+  const size = _driveFormatSize(parseInt(f.size) || 0);
+  const date = f.modifiedTime ? new Date(f.modifiedTime).toLocaleDateString('ro') : '';
+
+  let actions = '';
+  if (isFolder) {
+    actions = `<button class="drive-act-btn" onclick="driveOpenFolder('${f.id}','${esc(f.name)}')">📂 Deschide</button>`;
+  } else if (isExcel || isGSheet) {
+    actions = `<button class="drive-act-btn green" onclick="driveLoadExcel('${f.id}','${esc(f.name)}','${f.mimeType}')">📊 Încarcă tabel</button>
+               <button class="drive-act-btn" onclick="driveDownload('${f.id}','${esc(f.name)}','${f.mimeType}')">⬇</button>`;
+  } else if (isPdf || isImage) {
+    actions = `<button class="drive-act-btn green" onclick="driveAttach('${f.id}','${esc(f.name)}','${f.mimeType}')">📎 Atașează</button>
+               <button class="drive-act-btn" onclick="driveDownload('${f.id}','${esc(f.name)}','${f.mimeType}')">⬇</button>`;
+  } else {
+    actions = `<button class="drive-act-btn" onclick="driveDownload('${f.id}','${esc(f.name)}','${f.mimeType}')">⬇ Descarcă</button>`;
+  }
+
+  const nameClick = isFolder ? `onclick="driveOpenFolder('${f.id}','${esc(f.name)}')"` : '';
+  return `<div class="drive-item">
+    <span class="drive-item-icon">${icon}</span>
+    <span class="drive-item-name" ${nameClick} title="${esc(f.name)}" style="${isFolder?'color:var(--accent);cursor:pointer;font-weight:500':''}">${esc(f.name)}</span>
+    <span class="drive-item-meta">${size ? size + ' · ' : ''}${date}</span>
+    <div class="drive-item-actions">${actions}</div>
+  </div>`;
+}
+
+function driveOpenFolder(id, name) {
+  // Dacă suntem în search, resetează câmpul și reconstruiește stiva
+  document.getElementById('driveSearch').value = '';
+  _driveStack.push({ id, name });
+  _driveLoadFolder(id);
+}
+
+function _driveRenderBreadcrumb() {
+  const bc = document.getElementById('driveBreadcrumb');
+  bc.innerHTML = _driveStack.map((crumb, i) => {
+    const isLast = i === _driveStack.length - 1;
+    const sep = i > 0 ? '<span class="drive-crumb-sep"> › </span>' : '';
+    if (isLast) return `${sep}<span style="color:var(--text2);font-weight:500">${esc(crumb.name)}</span>`;
+    return `${sep}<span class="drive-crumb" onclick="driveNavTo(${i})">${esc(crumb.name)}</span>`;
+  }).join('');
+}
+
+function driveNavTo(idx) {
+  _driveStack = _driveStack.slice(0, idx + 1);
+  document.getElementById('driveSearch').value = '';
+  _driveLoadFolder(_driveStack[_driveStack.length - 1].id);
+}
+
+async function driveDownload(fileId, name, mime) {
+  const status = document.getElementById('driveStatus');
+  status.textContent = `⏳ Se descarcă ${name}...`;
+  try {
+    // Google Docs/Sheets trebuie exportate
+    let url, dlName = name;
+    if (mime === 'application/vnd.google-apps.spreadsheet') {
+      url = `${DRIVE_BASE}/files/${fileId}/export?mimeType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`;
+      dlName = name + '.xlsx';
+    } else if (mime === 'application/vnd.google-apps.document') {
+      url = `${DRIVE_BASE}/files/${fileId}/export?mimeType=application/vnd.openxmlformats-officedocument.wordprocessingml.document`;
+      dlName = name + '.docx';
+    } else {
+      url = `${DRIVE_BASE}/files/${fileId}?alt=media`;
+    }
+    const resp = await fetch(url, { headers: { Authorization: 'Bearer ' + TOKEN } });
+    if (!resp.ok) throw new Error(resp.statusText);
+    const blob = await resp.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = dlName;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+    status.textContent = `✓ Descărcat: ${dlName}`;
+  } catch(e) {
+    status.textContent = `✕ Eroare: ${e.message}`;
+  }
+}
+
+async function driveLoadExcel(fileId, name, mime) {
+  const status = document.getElementById('driveStatus');
+  status.textContent = `⏳ Se încarcă ${name} în tabel...`;
+  try {
+    let url;
+    if (mime === 'application/vnd.google-apps.spreadsheet') {
+      url = `${DRIVE_BASE}/files/${fileId}/export?mimeType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`;
+    } else {
+      url = `${DRIVE_BASE}/files/${fileId}?alt=media`;
+    }
+    const resp = await fetch(url, { headers: { Authorization: 'Bearer ' + TOKEN } });
+    if (!resp.ok) throw new Error(resp.statusText);
+    const arrayBuffer = await resp.arrayBuffer();
+
+    if (typeof XLSX === 'undefined') throw new Error('SheetJS nu s-a încărcat.');
+    const wb = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array', cellDates: true, dateNF: 'dd.mm.yyyy' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const raw = XLSX.utils.sheet_to_json(ws, { defval: null, raw: false });
+    if (!raw.length) throw new Error('Foaia este goală.');
+
+    _xlsFilename = name;
+    _sqlAllRows = raw;
+    _sqlColumns = Object.keys(raw[0]);
+    _sqlSortCol = ''; _sqlSortAsc = true; _sqlSource = 'excel';
+    _sqlRendered = false;
+    _setSrcBadge('excel', name, wb.SheetNames[0]);
+    _updateXlsBadge(name);
+    if (persistOcrData?.CNP) _ocrSearchTable(persistOcrData.CNP);
+
+    const headerDetect = raw.length > 1 ? _detectHeaderRow(_sqlColumns, raw[0]) : { score: 0 };
+    if (headerDetect.score >= 0.65) {
+      _applyPromoteHeader();
+      _showHeaderPromotedNotice(headerDetect.reason);
+    } else {
+      const btn = document.getElementById('btnPromoteHeader');
+      btn.style.display = '';
+      if (headerDetect.score >= 0.35) btn.style.animation = 'pulse-border .8s ease 3';
+    }
+
+    document.getElementById('sqlCount').textContent = `${_sqlAllRows.length} rânduri`;
+    document.getElementById('btnSumar').style.display = '';
+    document.getElementById('btnAq').style.display = '';
+    status.textContent = `✓ Încărcat în tabel: ${_sqlAllRows.length} rânduri din „${name}"`;
+    hideDriveModal();
+  } catch(e) {
+    status.textContent = `✕ Eroare: ${e.message}`;
+  }
+}
+
+async function driveAttach(fileId, name, mime) {
+  const status = document.getElementById('driveStatus');
+  status.textContent = `⏳ Se descarcă ${name} pentru atașare...`;
+  try {
+    const url = `${DRIVE_BASE}/files/${fileId}?alt=media`;
+    const resp = await fetch(url, { headers: { Authorization: 'Bearer ' + TOKEN } });
+    if (!resp.ok) throw new Error(resp.statusText);
+    const arrayBuffer = await resp.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    // Adaugă în lista de atașamente compose
+    attachedFiles.push({ name, type: mime, data: base64 });
+    _renderFileAttachRow();
+    status.textContent = `✓ Atașat: ${name}`;
+    hideDriveModal();
+  } catch(e) {
+    status.textContent = `✕ Eroare: ${e.message}`;
+  }
+}
+
+// ══════════════════════════════════════════════════════════
 // SQL VIEWER MODULE
 // ══════════════════════════════════════════════════════════
 let _sqlAllRows = [], _sqlColumns = [], _sqlSortCol = '', _sqlSortAsc = true;
@@ -4870,6 +5119,24 @@ function showRegConfirmInSidebar(nr, toEmail, emailStatus) {
 
 <!-- ══════════════════════════════════════════════════════════════ -->
 <!-- RAPORT JURIDIC MODAL                                          -->
+<!-- ══ DRIVE BROWSER MODAL ══════════════════════════════════════ -->
+<div id="driveModal" class="hidden" onclick="if(event.target===this)hideDriveModal()">
+  <div class="drive-panel">
+    <div class="drive-toolbar">
+      <h3>📁 Google Drive</h3>
+      <div class="drive-breadcrumb" id="driveBreadcrumb"></div>
+      <input type="search" class="drive-search" id="driveSearch" placeholder="🔍 Caută fișiere..."
+        oninput="clearTimeout(_driveSearchT);_driveSearchT=setTimeout(()=>driveSearch(this.value.trim()),400)"
+        onkeydown="if(event.key==='Escape')hideDriveModal()">
+      <button class="tb-btn" onclick="hideDriveModal()">✕</button>
+    </div>
+    <div class="drive-list" id="driveList">
+      <div style="padding:40px;text-align:center;color:var(--text3)">Se încarcă...</div>
+    </div>
+    <div class="drive-status" id="driveStatus"></div>
+  </div>
+</div>
+
 <!-- ══════════════════════════════════════════════════════════════ -->
 <div id="raportModal" class="sql-modal hidden" onclick="if(event.target===this)hideRaportModal()">
   <div class="sql-panel" style="max-width:700px;width:96vw">
