@@ -2729,6 +2729,9 @@ function syncDocOptInput() {
     atasEl.style.borderColor = 'var(--green)';
     atasEl.style.background  = 'rgba(22,163,74,.07)';
     atasEl.title = `Sugerat: ${indicativ}`;
+    // Sincronizează și numele fișierului merge PDF
+    const mergeEl = document.getElementById('mergeFileName');
+    if (mergeEl) mergeEl.value = indicativ.endsWith('.pdf') ? indicativ : indicativ + '.pdf';
   }
   // Sync attachment rename field with checked doc type names
   syncAttRenameFromReg();
@@ -4826,7 +4829,9 @@ function showRegConfirmInSidebar(nr, toEmail, emailStatus) {
         <div class="reg-field full">
           <label>Denumire atașamente</label>
           <input id="regAtas" type="text" placeholder="fisier1.pdf, fisier2.pdf"
-            oninput="this.style.borderColor='';this.style.background='';this.title=''">
+            oninput="this.style.borderColor='';this.style.background='';this.title='';
+              const _mf=document.getElementById('mergeFileName');
+              if(_mf){const v=this.value.trim();_mf.value=v&&!v.endsWith('.pdf')?v+'.pdf':v;}">
         </div>
         <div class="reg-field full">
           <label>Observații</label>
