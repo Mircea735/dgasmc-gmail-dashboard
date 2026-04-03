@@ -858,7 +858,7 @@ const TEMPLATES_BUILTIN = [
   {id:'T6',name:'Mecanisme tranșe 500/375/250 lei',cat:'Restanțe',color:'#f97316',desc:'Sume variate, cum funcționează tranșele',
    body:'Stimulentul este în valoare de 500 lei, dar în funcție de disponibilul financiar acordat se plătește 500, 375 sau 250 lei. Nu se trece la plata lunii următoare până nu se închide suma de 500 lei pentru luna respectivă.\n\nValoarea plății nu este predictibilă — depinde de disponibilul financiar acordat de Primăria Capitalei. Se ține cont de valoarea lunară, astfel încât stimulentul fiecărei luni să totalizeze 500 lei, chiar dacă înseamnă 2-3 tranșe.\n\nMomentul, Primăria Municipiului București nu a alocat fondurile necesare. Plățile sunt condiționate de aprobarea noului buget anual.\n\nNe exprimăm regretul pentru dificultățile întâmpinate.'},
   {id:'T7',name:'Confirmare înregistrare documente',cat:'Înregistrare',color:'#14b8a6',desc:'Acte primite, număr de înregistrare',
-   body:'Numărul de înregistrare al documentelor transmise instituției noastre este: {NR_INREGISTRARE}, iar acestea vor fi procesate în cel mai scurt timp posibil.'},
+   body:'Numărul de înregistrare al documentelor transmise instituției noastre este: {INDICATIV}, iar acestea vor fi procesate în cel mai scurt timp posibil.'},
   {id:'T8',name:'Acte necesare deces — sume neîncasate',cat:'Deces',color:'#ef4444',desc:'Moștenitor solicită sume restante',
    body:'Pentru a intra în posesia sumei rămasă neîncasată, reprezentând stimulentul aferent lunilor restante, aveți nevoie de următoarele documente:\n\n• Certificat de moștenitor sau de calitate de moștenitor\n• Copie act de identitate moștenitor\n• Extras de cont pe numele moștenitorului\n• Certificat de deces (copie)\n\nDocumentele se pot transmite pe această adresă de email sau depune la sediul nostru.'},
   {id:'T9',name:'Reînnoire certificat — nu e necesar',cat:'Dosar',color:'#60a5fa',desc:'Nu trebuie trimis noul certificat de handicap',
@@ -881,6 +881,7 @@ let _emailsRegistered=new Set(); // email IDs registered this session
 let _composeMode=false; // true = new email, not a reply
 let persistOcrData=null, curEmailMeta=null;
 let _lastSenderEmail='', _lastSenderName='', _lastThreadId='', _lastMsgId='', _lastSubject='';
+let _lastIndicativ=''; // R43/928/03.04.2026 — setat după înregistrare, folosit în template {INDICATIV}
 let _senderNume='', _senderPrenume='';
 
 // Extracts original sender from forwarded email body.
@@ -2297,7 +2298,7 @@ function applyTmpl(t) {
   document.getElementById('tc-'+t.id)?.classList.add('active');
   const op=document.getElementById('opInput').value||'{OP}';
   const full=HEADER+t.body+FOOTER.replace('{OP}',op);
-  const vars=[...new Set([...full.matchAll(/\{([^}]+)\}/g)].map(m=>m[1]).filter(v=>v!=='OP'))];
+  const vars=[...new Set([...full.matchAll(/\{([^}]+)\}/g)].map(m=>m[1]).filter(v=>v!=='OP'&&v!=='INDICATIV'))];
   const row=document.getElementById('varsRow');
   row.innerHTML=''; row.dataset.tmpl=full;
   vars.forEach(v=>{
@@ -2314,6 +2315,8 @@ function rebuildBody(){
   const row=document.getElementById('varsRow');
   const op=document.getElementById('opInput').value||'{OP}';
   let body=(row.dataset.tmpl||'').replace(/\{OP\}/g,op);
+  // Auto-substituie {INDICATIV} cu ultimul indicativ înregistrat
+  if (_lastIndicativ) body=body.replace(/\{INDICATIV\}/g, _lastIndicativ);
   row.querySelectorAll('input[data-v]').forEach(inp=>{
     const val=inp.value.trim()||'{'+inp.dataset.v+'}';
     body=body.replace(new RegExp('\\{'+inp.dataset.v+'\\}','g'),val);
@@ -3385,7 +3388,12 @@ async function doRegister() {
       try {
         st.textContent=`✓ Înregistrat: ${nr} — se trimite confirmare...`;
         const replySubj = _lastSubject ? ((_lastSubject.startsWith('Re:')?'':'Re: ')+_lastSubject) : 'Re: Înregistrare documente';
-        const replyBody = `Numărul de înregistrare al documentelor transmise instituției noastre este: ${nr}, iar acestea vor fi procesate în cel mai scurt timp posibil.`
+        const regNr = (SHEET_NAME.match(/\b(\d{2,})\b/)||[])[1] || '';
+        const today = new Date();
+        const dataTrimiterii = `${String(today.getDate()).padStart(2,'0')}.${String(today.getMonth()+1).padStart(2,'0')}.${today.getFullYear()}`;
+        const indicativComplet = regNr ? `R${regNr}/${nr}/${dataTrimiterii}` : `${nr}/${dataTrimiterii}`;
+        _lastIndicativ = indicativComplet;
+        const replyBody = `Numărul de înregistrare al documentelor transmise instituției noastre este: ${indicativComplet}, iar acestea vor fi procesate în cel mai scurt timp posibil.`
           + FOOTER.replace('{OP}', operator||document.getElementById('opInput').value||'');
         const raw=buildMime({to:email, subject:replySubj, body:replyBody, inReplyTo:_lastMsgId||undefined});
         const sendBody={raw};
