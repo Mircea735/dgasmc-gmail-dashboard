@@ -2610,7 +2610,7 @@ function showSentSector2() {
   const list = document.getElementById('emailList');
   list.innerHTML = '<div class="load-row"><div class="spinner"></div> Se încarcă trimise...</div>';
   document.getElementById('statsBar').style.display = 'none';
-  const q = encodeURIComponent(`in:sent label:Sector-2 after:${after}`);
+  const q = encodeURIComponent(`in:sent after:${after}`);
   api(`${BASE}/messages?q=${q}&maxResults=100`).then(async data => {
     const msgs = data.messages || [];
     if (!msgs.length) { list.innerHTML = '<div class="load-empty">Niciun email trimis găsit pentru Sector 2.</div>'; return; }
