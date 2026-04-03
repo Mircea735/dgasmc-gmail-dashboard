@@ -2715,10 +2715,18 @@ function syncDocOptInput() {
   document.getElementById('regContinut').value = checked.join(', ');
   document.getElementById('regContinutSel').textContent = checked.length ? `(${checked.length} bifate)` : '';
   // Auto-fill attachment name: {indicativ}/{doc_types}.pdf
+  // Indicativul = Nr.crt/Data (coloana G din Sheets = concat A+E)
   if(checked.length) {
-    const nr = document.getElementById('regNextNr').dataset.nr || '';
-    const prefix = nr ? `${nr}/` : '';
-    document.getElementById('regAtas').value = `${prefix}${checked.join(', ')}.pdf`;
+    const nr   = document.getElementById('regNextNr').dataset.nr || '';
+    const data = document.getElementById('regData').value || '';
+    const indicativ = (nr && data) ? `${nr}/${data}` : (nr || data);
+    const prefix = indicativ ? `${indicativ}_` : '';
+    const atasEl = document.getElementById('regAtas');
+    atasEl.value = `${prefix}${checked.join(', ')}.pdf`;
+    // Evidențiere verde — valoare sugerată automat
+    atasEl.style.borderColor = 'var(--green)';
+    atasEl.style.background  = 'rgba(22,163,74,.07)';
+    atasEl.title = `Sugerat automat: indicativ ${indicativ || '—'} + tipuri documente`;
   }
   // Sync attachment rename field with checked doc type names
   syncAttRenameFromReg();
@@ -3005,7 +3013,9 @@ async function showRegModal() {
   document.getElementById('regSector').value = sectorOcr;
   document.getElementById('regContinut').value = '';
   document.getElementById('regContinutSel').textContent = '';
-  document.getElementById('regAtas').value = curEmailMeta?.attachments?.join(', ')||'';
+  const _atasEl = document.getElementById('regAtas');
+  _atasEl.value = curEmailMeta?.attachments?.join(', ')||'';
+  _atasEl.style.borderColor = ''; _atasEl.style.background = ''; _atasEl.title = '';
   document.getElementById('regEmail').value = curEmailMeta?extractEmail(curEmailMeta.from):(_lastSenderEmail||'');
   document.getElementById('regOperator').value = document.getElementById('opInput').value||'';
   const today=new Date();
@@ -4811,7 +4821,8 @@ function showRegConfirmInSidebar(nr, toEmail, emailStatus) {
         </div>
         <div class="reg-field full">
           <label>Denumire atașamente</label>
-          <input id="regAtas" type="text" placeholder="fisier1.pdf, fisier2.pdf">
+          <input id="regAtas" type="text" placeholder="fisier1.pdf, fisier2.pdf"
+            oninput="this.style.borderColor='';this.style.background='';this.title=''">
         </div>
         <div class="reg-field full">
           <label>Observații</label>
