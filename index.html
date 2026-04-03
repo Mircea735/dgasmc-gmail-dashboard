@@ -3590,9 +3590,24 @@ async function refreshIstoric() {
     // Detectează numele exact al sheet-ului (rezistent la diferențe majuscule)
     const meta = await api(`${SHEETS_BASE}/${SHEETS_ID}?fields=sheets.properties.title`);
     const sheets = (meta.sheets||[]).map(s=>s.properties.title);
-    const found = sheets.find(t=>t.toLowerCase().includes('istoric'));
+    const savedSheet = localStorage.getItem('istoricSheetOverride');
+    const found = savedSheet || sheets.find(t=>t.toLowerCase().includes('istoric'));
     if (!found) {
-      body.innerHTML = `<div style="padding:30px;color:var(--red);font-size:12px">Sheet-ul cu „ISTORIC" în nume nu există.<br><br><small>Sheet-uri disponibile: <b>${esc(sheets.join(', '))}</b></small></div>`;
+      const opts = sheets.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
+      body.innerHTML = `<div style="padding:24px;font-size:12px">
+        <div style="color:var(--red);margin-bottom:12px">Sheet-ul „ISTORIC" nu există în spreadsheet.</div>
+        <label style="color:var(--text2)">Alege un sheet ca sursă ISTORIC:</label><br>
+        <select id="istoricSheetPicker" style="margin:8px 0;padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);color:var(--text1);font-size:12px;width:100%;max-width:400px">
+          <option value="">— selectează —</option>${opts}
+        </select><br>
+        <button class="tb-btn" style="margin-top:6px" onclick="
+          const v=document.getElementById('istoricSheetPicker').value;
+          if(!v){alert('Selectează un sheet.');return;}
+          localStorage.setItem('istoricSheetOverride',v);
+          refreshIstoric();
+        ">✓ Folosește acest sheet</button>
+        <button class="tb-btn" style="margin-top:6px;margin-left:6px;color:var(--text3)" onclick="localStorage.removeItem('istoricSheetOverride');refreshIstoric()">↺ Reset</button>
+      </div>`;
       return;
     }
     document.getElementById('istoricSheetName').textContent = `Sheet: ${found} · ${SHEETS_ID.slice(0,16)}…`;
