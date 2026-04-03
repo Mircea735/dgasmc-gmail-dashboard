@@ -3149,6 +3149,9 @@ async function showRegModal() {
   const yyyy=today.getFullYear();
   document.getElementById('regData').value=`${dd}.${mm}.${yyyy}`;
   document.getElementById('regStatus').textContent='';
+  // Restaurează preferința trimitere confirmare (default: da)
+  const savedConfirm = localStorage.getItem('sendConfirmEmail');
+  document.getElementById('chkSendConfirm').checked = savedConfirm !== '0';
   document.getElementById('regObs').value='';
   document.getElementById('regPreviewCol').classList.remove('visible');
   const _btnReg=document.getElementById('btnDoRegister');
@@ -3383,8 +3386,9 @@ async function doRegister() {
     if(curEmail?.id) { _emailsRegistered.add(curEmail.id); updateMiniStats(); }
 
     // ── Auto-send confirmation reply ──────────────────────────
+    const sendConfirm = document.getElementById('chkSendConfirm')?.checked !== false;
     let emailStatus='';
-    if(email) {
+    if(email && sendConfirm) {
       try {
         st.textContent=`✓ Înregistrat: ${nr} — se trimite confirmare...`;
         const replySubj = _lastSubject ? ((_lastSubject.startsWith('Re:')?'':'Re: ')+_lastSubject) : 'Re: Înregistrare documente';
@@ -3411,6 +3415,9 @@ async function doRegister() {
         emailStatus=`⚠ Înregistrat, dar email NEREUȘIT: ${emailErr.message.slice(0,60)}`;
         st.textContent=`✓ Înregistrat: ${nr} | ⚠ Email eșuat`;
       }
+    } else if (!sendConfirm) {
+      emailStatus='— Confirmare email dezactivată (Sheets/Apps Script)';
+      st.textContent=`✓ Înregistrat: ${nr} | fără confirmare dashboard`;
     } else {
       emailStatus='⚠ Email expeditor lipsă — trimitere automată omisă';
       st.textContent=`✓ Înregistrat: ${nr} | ⚠ fără email expeditor`;
@@ -5210,6 +5217,15 @@ function showRegConfirmInSidebar(nr, toEmail, emailStatus) {
         </div>
       </div>
       <div class="reg-status" id="regStatus"></div>
+      <div style="padding:4px 0 6px;display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text3)">
+        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;user-select:none">
+          <input type="checkbox" id="chkSendConfirm" checked
+            onchange="localStorage.setItem('sendConfirmEmail',this.checked?'1':'0')"
+            style="accent-color:var(--teal);width:14px;height:14px">
+          Trimite confirmare email din dashboard
+        </label>
+        <span style="color:var(--text3);font-size:10px">(debifează dacă Sheets/Apps Script trimite deja)</span>
+      </div>
       <div class="reg-acts">
         <button class="btn" style="flex:1;background:var(--surface3);border:1px solid var(--border);color:var(--text2)" onclick="showRegPreview()">👁 Previzualizează</button>
         <button class="btn btn-send" id="btnDoRegister" style="flex:1;opacity:.4;pointer-events:none" onclick="doRegister()">✓ Înregistrează</button>
