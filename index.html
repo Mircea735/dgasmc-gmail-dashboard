@@ -2060,8 +2060,18 @@ function ocrSearchCnpBtn(btn) {
   const raw = el ? (el.innerText !== undefined ? el.innerText : el.textContent) : '';
   const val = raw.replace(/[\s\u00a0\u200b]/g, ''); // elimină orice whitespace și caractere invizibile
   if (!val) { alert('Câmpul CNP este gol.'); return; }
-  if (!_sqlAllRows.length) { alert('Niciun tabel Excel/SQL încărcat.\nImportă un fișier Excel mai întâi.'); return; }
-  _ocrSearchTable(val);
+  if (_sqlAllRows.length) { _ocrSearchTable(val); return; }
+  // Fallback: caută direct în fișierul Excel de pe calculator
+  const pqPath = localStorage.getItem('sqlPqPath') || '';
+  if (!pqPath) { alert('Niciun tabel încărcat și nicio cale fișier configurată în ⚙ Conexiune SQL.'); return; }
+  _setOcrSidebarResult(`<div style="color:var(--text3);font-size:11px">🔍 Caut CNP în fișier local...</div>`);
+  fetch('/api/search-cnp', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({cnp:val, path:pqPath})})
+    .then(r=>r.json()).then(data=>{
+      if (data.error) { _setOcrSidebarResult(`<div style="color:var(--red);font-size:11px">✕ ${esc(data.error)}</div>`); return; }
+      if (!data.count) { _setOcrSidebarResult(`<div style="color:var(--yellow);font-size:11px">CNP <b>${esc(val)}</b> nu a fost găsit în fișier.</div>`); return; }
+      showCnpPopup(val, data.hits);
+      _setOcrSidebarResult(`<div style="color:var(--green);font-size:11px">✓ ${data.count} rezultat(e) găsite pentru <b>${esc(val)}</b></div>`);
+    }).catch(e=>_setOcrSidebarResult(`<div style="color:var(--red);font-size:11px">✕ ${esc(e.message)}</div>`));
 }
 
 function updateOcrPersistPanel() {

@@ -253,6 +253,55 @@ poll();
                 $res.ContentLength64 = $e.Length; $res.OutputStream.Write($e, 0, $e.Length)
             }
 
+        } elseif ($req.Url.AbsolutePath -eq '/api/search-cnp') {
+            try {
+                $ms = New-Object System.IO.MemoryStream
+                $req.InputStream.CopyTo($ms)
+                $payload = [System.Text.Encoding]::UTF8.GetString($ms.ToArray()) | ConvertFrom-Json
+                $cnp = [string]$payload.cnp
+                $path = [string]$payload.path
+                if (-not $cnp) { throw "CNP lipsa" }
+                if (-not $path -or -not (Test-Path $path)) { throw "Cale fisier invalida: $path" }
+
+                Add-Type -AssemblyName Microsoft.Office.Interop.Excel -ErrorAction SilentlyContinue
+                $xl = New-Object -ComObject Excel.Application
+                $xl.Visible = $false; $xl.DisplayAlerts = $false
+                $wb = $xl.Workbooks.Open($path, 0, $true) # read-only
+                $hits = @()
+                foreach ($ws in $wb.Worksheets) {
+                    $used = $ws.UsedRange
+                    $vals = $used.Value2
+                    if (-not $vals) { continue }
+                    $rows = $used.Rows.Count; $cols = $used.Columns.Count
+                    # Detecteaza header (primul rand)
+                    $headers = @()
+                    for ($c = 1; $c -le $cols; $c++) { $headers += if ($vals[1,$c]) { [string]$vals[1,$c] } else { "Col$c" } }
+                    # Cauta CNP in toate celulele
+                    for ($r = 2; $r -le $rows; $r++) {
+                        for ($c = 1; $c -le $cols; $c++) {
+                            $cell = if ($vals[$r,$c] -ne $null) { [string]$vals[$r,$c] } else { '' }
+                            $digits = $cell -replace '\D',''
+                            if ($cell -eq $cnp -or $digits -eq $cnp) {
+                                $obj = @{ _sheet = $ws.Name; _row = $r }
+                                for ($cc = 1; $cc -le $cols; $cc++) { $obj[$headers[$cc-1]] = if ($vals[$r,$cc] -ne $null) { [string]$vals[$r,$cc] } else { '' } }
+                                $hits += $obj; break
+                            }
+                        }
+                    }
+                }
+                $wb.Close($false); $xl.Quit()
+                [System.Runtime.InteropServices.Marshal]::ReleaseComObject($xl) | Out-Null
+                $jss = New-Object System.Web.Script.Serialization.JavaScriptSerializer; $jss.MaxJsonLength = 10485760
+                $json = $jss.Serialize(@{ hits = $hits; count = $hits.Count })
+                $b = (New-Object System.Text.UTF8Encoding $false).GetBytes($json)
+                $res.ContentType = 'application/json; charset=utf-8'; $res.ContentLength64 = $b.Length; $res.OutputStream.Write($b, 0, $b.Length)
+            } catch {
+                $safeMsg = $_.Exception.Message -replace '\\','\\' -replace '"','\"' -replace "`n",' '
+                $e = (New-Object System.Text.UTF8Encoding $false).GetBytes('{"error":"' + $safeMsg + '"}')
+                $res.StatusCode = 500; $res.ContentType = 'application/json'
+                $res.ContentLength64 = $e.Length; $res.OutputStream.Write($e, 0, $e.Length)
+            }
+
         } elseif ($req.Url.AbsolutePath -eq '/api/pq-file') {
             try {
                 $ms = New-Object System.IO.MemoryStream
