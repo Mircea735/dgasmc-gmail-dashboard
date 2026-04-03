@@ -3533,19 +3533,28 @@ async function refreshIstoric() {
   body.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3)"><div class="spinner"></div> Se încarcă...</div>';
   document.getElementById('istoricCount').textContent = '';
   try {
-    const range = encodeURIComponent(`'${ISTORIC_SHEET}'!A:Z`);
+    // Detectează numele exact al sheet-ului (rezistent la diferențe majuscule)
+    const meta = await api(`${SHEETS_BASE}/${SHEETS_ID}?fields=sheets.properties.title`);
+    const sheets = (meta.sheets||[]).map(s=>s.properties.title);
+    const found = sheets.find(t=>t.toLowerCase().includes('istoric'));
+    if (!found) {
+      body.innerHTML = `<div style="padding:30px;color:var(--red);font-size:12px">Sheet-ul cu „ISTORIC" în nume nu există.<br><br><small>Sheet-uri disponibile: <b>${esc(sheets.join(', '))}</b></small></div>`;
+      return;
+    }
+    document.getElementById('istoricSheetName').textContent = `Sheet: ${found} · ${SHEETS_ID.slice(0,16)}…`;
+    const range = encodeURIComponent(`'${found}'!A:Z`);
     const url = `${SHEETS_BASE}/${SHEETS_ID}/values/${range}`;
     const data = await api(url);
     const rows = data.values || [];
     if (!rows.length) { body.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3)">Sheet-ul ISTORIC este gol sau nu există.</div>'; return; }
     _istoricHeaders = rows[0];
     _istoricAllRows = rows.slice(1);
-    document.getElementById('istoricSheetName').textContent = `Sheet: ${ISTORIC_SHEET} · ${SHEETS_ID.slice(0,16)}…`;
     const now = new Date();
     document.getElementById('istoricLastLoad').textContent = `Actualizat: ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
     renderIstoric(_istoricAllRows);
   } catch(e) {
-    body.innerHTML = `<div style="padding:30px;color:var(--red);font-size:12px">✕ ${esc(e.message)}<br><br><small>Verifică că sheet-ul se numește exact „ISTORIC" și că ai acces.</small></div>`;
+    const sheetsList = e._sheets ? ` Sheets disponibile: ${e._sheets}` : '';
+    body.innerHTML = `<div style="padding:30px;color:var(--red);font-size:12px">✕ ${esc(e.message)}${sheetsList}<br><br><small>Sheet-ul cu „ISTORIC" în nume nu a fost găsit.</small></div>`;
   }
 }
 
