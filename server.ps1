@@ -237,12 +237,18 @@ poll();
                         $val = $row[$col.ColumnName]
                         if ($val -is [System.DBNull]) { $val = $null }
                         elseif ($val -is [datetime]) { $val = $val.ToString('dd.MM.yyyy') }
+                        elseif ($val -ne $null) { $val = $val.ToString() }
                         $obj[$col.ColumnName] = $val
                     }
                     $rows += $obj
                 }
-                $json = @{ rows = $rows; count = $rows.Count; columns = @($table.Columns | ForEach-Object { $_.ColumnName }) } | ConvertTo-Json -Depth 5 -Compress
-                $respBytes = [System.Text.Encoding]::UTF8.GetBytes($json)
+                # Serializare manuala robusta — evita bug-urile ConvertTo-Json PS5.1 cu diacritice/ghilimele
+                $sb = New-Object System.Text.StringBuilder
+                $jss = New-Object System.Web.Script.Serialization.JavaScriptSerializer
+                $jss.MaxJsonLength = 104857600 # 100MB
+                $payload = @{ rows = $rows; count = $rows.Count; columns = @($table.Columns | ForEach-Object { $_.ColumnName }) }
+                $json = $jss.Serialize($payload)
+                $respBytes = (New-Object System.Text.UTF8Encoding $false).GetBytes($json)
                 $res.StatusCode = 200
                 $res.ContentType = 'application/json; charset=utf-8'
                 $res.ContentLength64 = $respBytes.Length
