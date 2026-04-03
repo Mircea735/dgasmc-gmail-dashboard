@@ -189,6 +189,15 @@ poll();
             $res.ContentLength64 = $content.Length
             $res.OutputStream.Write($content, 0, $content.Length)
 
+        } elseif ($req.Url.AbsolutePath -eq '/api/sql-ping') {
+            $psVer = $PSVersionTable.PSVersion.ToString()
+            $hasSqlClient = $null -ne ([System.AppDomain]::CurrentDomain.GetAssemblies() | Where-Object { try { $_.GetType('System.Data.SqlClient.SqlConnection') -ne $null } catch { $false } } | Select-Object -First 1)
+            Add-Type -AssemblyName System.Data -ErrorAction SilentlyContinue
+            $hasSqlClient2 = $null -ne [System.Type]::GetType('System.Data.SqlClient.SqlConnection, System.Data')
+            $info = @{ psVersion=$psVer; sqlClientLoaded=($hasSqlClient -or $hasSqlClient2); serverVersion='2026-04' } | ConvertTo-Json -Compress
+            $b = [System.Text.Encoding]::UTF8.GetBytes($info)
+            $res.ContentType = 'application/json'; $res.ContentLength64 = $b.Length; $res.OutputStream.Write($b,0,$b.Length)
+
         } elseif ($req.Url.AbsolutePath -eq '/api/sql' -and $req.HttpMethod -eq 'POST') {
             # SQL Server proxy — executa query si returneaza JSON
             try {
