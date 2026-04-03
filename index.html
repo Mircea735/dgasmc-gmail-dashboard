@@ -379,6 +379,21 @@ button,input,select,textarea{font-family:var(--sans);}
 .hi-dir.recv{background:rgba(59,130,246,.12);color:var(--accent2);}
 .hi-date{font-family:var(--mono);font-size:9px;color:var(--text3);}
 .sheets-flag{font-size:10px;vertical-align:middle;margin-left:3px;opacity:.85;}
+.sent-group{border-bottom:1px solid var(--border);}
+.sent-group-hdr{display:flex;align-items:center;gap:6px;padding:8px 12px;cursor:pointer;background:var(--surface);transition:background .15s;}
+.sent-group-hdr:hover{background:var(--surface2);}
+.sent-group-arrow{font-size:9px;color:var(--text3);transition:transform .2s;flex-shrink:0;}
+.sent-group.open .sent-group-arrow{transform:rotate(90deg);}
+.sent-group-addr{font-size:12px;font-weight:600;color:var(--text1);}
+.sent-group-body{display:none;}
+.sent-group.open .sent-group-body{display:block;}
+.erow{padding:6px 12px;border-bottom:1px solid var(--surface2);cursor:pointer;transition:background .1s;}
+.erow:hover{background:var(--surface2);}
+.erow-top{display:flex;align-items:baseline;gap:8px;margin-bottom:2px;}
+.erow-from{font-size:11px;font-weight:500;color:var(--text2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.erow-subj{font-size:11px;color:var(--text1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.erow-date{font-family:var(--mono);font-size:10px;color:var(--text3);white-space:nowrap;flex-shrink:0;}
+.erow-snip{font-size:10px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .hi-subj{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .hist-empty{padding:14px 10px;font-size:11px;color:var(--text3);text-align:center;line-height:1.6;}
 /* ── SQL VIEWER MODAL ── */
@@ -2655,20 +2670,53 @@ async function showSentSector2() {
     }
 
     filtered.sort((a,b) => parseInt(b.internalDate)-parseInt(a.internalDate));
-    list.innerHTML = `<div style="padding:4px 12px;font-size:10px;color:var(--text3);border-bottom:1px solid var(--border)">📤 ${filtered.length} trimise către adrese Sector 2 (${days} zile)</div>` +
-      filtered.map(md => {
+
+    // Grupare pe adresă destinatar
+    const groups = new Map(); // addr → {display, msgs[]}
+    filtered.forEach(md => {
+      const h = Object.fromEntries((md.payload?.headers||[]).map(x=>[x.name,x.value]));
+      const toRaw = h.To || '';
+      const addrMatch = toRaw.match(/<([^>]+)>/) || toRaw.match(/(\S+@\S+)/);
+      const addr = addrMatch ? addrMatch[1].toLowerCase() : toRaw.toLowerCase();
+      const display = toRaw.replace(/<.*>/, '').trim() || addr;
+      if (!groups.has(addr)) groups.set(addr, {display, addr, msgs:[]});
+      groups.get(addr).msgs.push(md);
+    });
+
+    const groupsSorted = [...groups.values()].sort((a,b) => b.msgs.length - a.msgs.length);
+
+    list.innerHTML = `<div style="padding:4px 12px;font-size:10px;color:var(--text3);border-bottom:1px solid var(--border)">
+      📤 ${filtered.length} trimise · ${groups.size} adrese Sector 2 · ultimele ${days} zile
+    </div>` + groupsSorted.map((g, gi) => {
+      const confCount = g.msgs.filter(md => {
+        const snip=(md.snippet||'').toLowerCase();
+        return snip.includes('numărul de înregistrare')||/r\d+\/\d+\//.test(snip)||_confirmedSentIds.has(md.id);
+      }).length;
+      const rows = g.msgs.map(md => {
         const h = Object.fromEntries((md.payload?.headers||[]).map(x=>[x.name,x.value]));
-        const snip = (md.snippet||'').toLowerCase();
-        const isConf = snip.includes('numărul de înregistrare')||/r\d+\/\d+\//.test(snip)||_confirmedSentIds.has(md.id);
-        return `<div class="erow" onclick="viewEmail('${md.id}')">
+        const snip=(md.snippet||'').toLowerCase();
+        const isConf=snip.includes('numărul de înregistrare')||/r\d+\/\d+\//.test(snip)||_confirmedSentIds.has(md.id);
+        return `<div class="erow" style="padding-left:28px;border-left:2px solid var(--border)" onclick="viewEmail('${md.id}')">
           <div class="erow-top">
-            <span class="erow-from" style="color:var(--text2)">→ ${esc(h.To||'')}</span>
+            <span class="erow-subj" style="flex:1">${esc(h.Subject||'(fără subiect)')}${isConf?' <span style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;border-radius:3px;padding:0 4px;font-size:10px;font-weight:600">📊</span>':''}</span>
             <span class="erow-date">${fmtDate(parseInt(md.internalDate))}</span>
           </div>
-          <div class="erow-subj">${esc(h.Subject||'(fără subiect)')}${isConf?' <span style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;border-radius:3px;padding:0 4px;font-size:10px;font-weight:600">📊</span>':''}</div>
           <div class="erow-snip">${esc(md.snippet||'')}</div>
         </div>`;
       }).join('');
+      return `<div class="sent-group">
+        <div class="sent-group-hdr" onclick="this.parentElement.classList.toggle('open')">
+          <span class="sent-group-arrow">▶</span>
+          <span class="sent-group-addr">${esc(g.display||g.addr)}</span>
+          <span style="font-size:10px;color:var(--text3);margin-left:4px">${esc(g.addr)}</span>
+          <span style="margin-left:auto;display:flex;gap:4px;align-items:center">
+            ${confCount?`<span style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;border-radius:3px;padding:0 5px;font-size:10px;font-weight:600">📊 ${confCount}</span>`:''}
+            <span style="background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:0 6px;font-size:10px;color:var(--text2)">${g.msgs.length} email${g.msgs.length>1?'uri':''}</span>
+          </span>
+        </div>
+        <div class="sent-group-body">${rows}</div>
+      </div>`;
+    }).join('');
   } catch(e) {
     list.innerHTML = `<div class="load-empty" style="color:var(--red)">✕ ${esc(e.message)}</div>`;
   }
