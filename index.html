@@ -633,6 +633,7 @@ body.sql-panel-open .main{height:calc(var(--sql-panel-h, 46vh) * -1 + 100vh - 48
     <div class="tb-right">
       <span class="token-warn hidden" id="tokenWarn" onclick="requestToken()">⚠ Sesiune expirată</span>
       <button class="tb-btn" onclick="composeNew()" title="Email nou" style="background:rgba(34,197,94,.08);border-color:#22c55e;color:#22c55e">✉ Email nou</button>
+      <button class="tb-btn" onclick="showSentSector2()" title="Emailuri trimise Sector 2" style="background:rgba(234,179,8,.08);border-color:#ca8a04;color:#a16207">📤 Trimise S2</button>
       <button class="tb-btn" onclick="showRegistruViewer()" title="Vizualizează Registrul R43/2026" style="background:rgba(37,99,235,.1);border-color:var(--accent);color:var(--accent)">📊 Registru</button>
       <button class="tb-btn" onclick="showIstoricModal()" title="Istoric trimiteri confirmare (Apps Script)" style="background:rgba(6,182,212,.1);border-color:#0891b2;color:#0891b2">📜 Istoric</button>
       <button class="tb-btn" onclick="showSqlViewer()" title="Situație beneficiari SQL Server" style="background:rgba(15,118,110,.1);border-color:var(--teal);color:var(--teal)">🗄 SQL</button>
@@ -2597,6 +2598,48 @@ async function trashEmail(id) {
     alert('Eroare la ștergere: '+e.message);
   }
 }
+function showSentSector2() {
+  const sel = document.getElementById('labelSel');
+  // Selectează opțiunea Sector 2 dacă există, altfel rămâne pe toate
+  const opt = Array.from(sel.options).find(o => o.value === 'Sector 2');
+  if (opt) { sel.value = 'Sector 2'; }
+  // Schimbă query-ul să caute în SENT cu label Sector 2
+  const daysIn = document.getElementById('daysIn');
+  const days = parseInt(daysIn.value) || 7;
+  const after = new Date(Date.now()-days*86400000).toISOString().slice(0,10).replace(/-/g,'/');
+  const list = document.getElementById('emailList');
+  list.innerHTML = '<div class="load-row"><div class="spinner"></div> Se încarcă trimise...</div>';
+  document.getElementById('statsBar').style.display = 'none';
+  const q = encodeURIComponent(`in:sent label:Sector-2 after:${after}`);
+  api(`${BASE}/messages?q=${q}&maxResults=100`).then(async data => {
+    const msgs = data.messages || [];
+    if (!msgs.length) { list.innerHTML = '<div class="load-empty">Niciun email trimis găsit pentru Sector 2.</div>'; return; }
+    const meta = [];
+    for (let i = 0; i < msgs.length; i += 8) {
+      const batch = await Promise.all(msgs.slice(i, i+8).map(m =>
+        api(`${BASE}/messages/${m.id}?format=metadata&metadataHeaders=To&metadataHeaders=Subject&metadataHeaders=Date`)
+      ));
+      meta.push(...batch);
+    }
+    meta.sort((a,b) => parseInt(b.internalDate)-parseInt(a.internalDate));
+    list.innerHTML = meta.map(md => {
+      const h = Object.fromEntries((md.payload?.headers||[]).map(x=>[x.name,x.value]));
+      const snip = (md.snippet||'').toLowerCase();
+      const isConf = snip.includes('numărul de înregistrare')||/r\d+\/\d+\//.test(snip)||_confirmedSentIds.has(md.id);
+      return `<div class="erow" onclick="viewEmail('${md.id}')">
+        <div class="erow-top">
+          <span class="erow-from" style="color:var(--text2)">→ ${esc(h.To||'')}</span>
+          <span class="erow-date">${fmtDate(parseInt(md.internalDate))}</span>
+        </div>
+        <div class="erow-subj">${esc(h.Subject||'(fără subiect)')}${isConf?' <span style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;border-radius:3px;padding:0 4px;font-size:10px;font-weight:600">📊</span>':''}</div>
+        <div class="erow-snip">${esc(md.snippet||'')}</div>
+      </div>`;
+    }).join('');
+  }).catch(e => {
+    list.innerHTML = `<div class="load-empty" style="color:var(--red)">✕ ${esc(e.message)}</div>`;
+  });
+}
+
 function composeNew() {
   _composeMode = true;
   document.getElementById('rTo').value = '';
