@@ -3529,7 +3529,7 @@ async function refreshIstoric() {
   body.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3)"><div class="spinner"></div> Se încarcă...</div>';
   document.getElementById('istoricCount').textContent = '';
   try {
-    const range = encodeURIComponent(`'${ISTORIC_SHEET}'!A1:Z`);
+    const range = encodeURIComponent(`'${ISTORIC_SHEET}'!A:Z`);
     const url = `${SHEETS_BASE}/${SHEETS_ID}/values/${range}`;
     const data = await api(url);
     const rows = data.values || [];
