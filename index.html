@@ -378,6 +378,7 @@ button,input,select,textarea{font-family:var(--sans);}
 .hi-dir.sent{background:rgba(20,184,166,.15);color:var(--teal);}
 .hi-dir.recv{background:rgba(59,130,246,.12);color:var(--accent2);}
 .hi-date{font-family:var(--mono);font-size:9px;color:var(--text3);}
+.sheets-flag{font-size:10px;vertical-align:middle;margin-left:3px;opacity:.85;}
 .hi-subj{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .hist-empty{padding:14px 10px;font-size:11px;color:var(--text3);text-align:center;line-height:1.6;}
 /* ── SQL VIEWER MODAL ── */
@@ -2670,7 +2671,7 @@ async function loadHistory(contactEmail, currentId) {
       const isCurrent=md.id===currentId;
       return `<div class="hitem ${isCurrent?'is-current':''}" onclick="viewEmail('${md.id}')">
         <div class="hi-top">
-          <span class="hi-dir ${isSent?'sent':'recv'}">${isSent?'▶ trimis':'◀ primit'}</span>
+          <span class="hi-dir ${isSent?'sent':'recv'}">${isSent?'▶ trimis <span class="sheets-flag" title="Trimis via Sheets / Apps Script">📊</span>':'◀ primit'}</span>
           <span class="hi-date">${fmtDateFull(parseInt(md.internalDate))}</span>
         </div>
         <div class="hi-subj">${esc(h2.Subject||'(fără subiect)')}</div>
