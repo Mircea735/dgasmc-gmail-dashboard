@@ -2683,7 +2683,8 @@ async function showSentSector2() {
       groups.get(addr).msgs.push(md);
     });
 
-    const groupsSorted = [...groups.values()].sort((a,b) => b.msgs.length - a.msgs.length);
+    const groupsSorted = [...groups.values()].sort((a,b) =>
+      parseInt(b.msgs[0].internalDate) - parseInt(a.msgs[0].internalDate));
 
     list.innerHTML = `<div style="padding:4px 12px;font-size:10px;color:var(--text3);border-bottom:1px solid var(--border)">
       📤 ${filtered.length} trimise · ${groups.size} adrese Sector 2 · ultimele ${days} zile
