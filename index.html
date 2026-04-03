@@ -3590,8 +3590,8 @@ async function refreshIstoric() {
     // Detectează numele exact al sheet-ului (rezistent la diferențe majuscule)
     const meta = await api(`${SHEETS_BASE}/${SHEETS_ID}?fields=sheets.properties.title`);
     const sheets = (meta.sheets||[]).map(s=>s.properties.title);
-    const savedSheet = localStorage.getItem('istoricSheetOverride');
-    const found = savedSheet || sheets.find(t=>t.toLowerCase().includes('istoric')) || SHEET_NAME;
+    localStorage.removeItem('istoricSheetOverride'); // curăță override vechi
+    const found = sheets.find(t=>t.toLowerCase().includes('istoric')) || SHEET_NAME;
     document.getElementById('istoricSheetName').textContent = `Sheet: ${found} · ${SHEETS_ID.slice(0,16)}…`;
     const range = encodeURIComponent(`'${found}'!A:Z`);
     const url = `${SHEETS_BASE}/${SHEETS_ID}/values/${range}`;
