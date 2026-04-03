@@ -4778,7 +4778,7 @@ function toggleSqlSettings() {
   if (!p.classList.contains('hidden')) {
     ['sqlServer','sqlDatabase','sqlUser','sqlViewName','sqlWhere'].forEach(k=>{
       const el=document.getElementById(k);
-      if(el) el.value=localStorage.getItem(k)||(k==='sqlServer'?'192.168.1.10':k==='sqlDatabase'?'AsistentaSociala':'');
+      if(el) el.value=localStorage.getItem(k)||(k==='sqlServer'?'192.168.1.10':k==='sqlDatabase'?'AsistentaSociala':k==='sqlViewName'?'PowerQuery_Fisiere':'');
     });
     const relCb=document.getElementById('sqlIncludeRelCols');
     if(relCb) relCb.checked=localStorage.getItem('sqlIncludeRelCols')==='1';
