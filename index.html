@@ -2686,29 +2686,60 @@ async function showSentSector2() {
     const groupsSorted = [...groups.values()].sort((a,b) =>
       parseInt(b.msgs[0].internalDate) - parseInt(a.msgs[0].internalDate));
 
+    // Pas 4: pentru grupele Registratură, fetch thread → beneficiar
+    const beneficiarMap = new Map(); // msgId → adresă beneficiar
+    const regGroups = groupsSorted.filter(g => /registratur/i.test(g.addr));
+    if (regGroups.length) {
+      const threadIds = [...new Set(regGroups.flatMap(g => g.msgs.map(m => m.threadId)))];
+      await Promise.all(threadIds.map(async tid => {
+        try {
+          const t = await api(`${BASE}/threads/${tid}?format=metadata&metadataHeaders=From&metadataHeaders=Reply-To`);
+          // Primul mesaj din thread care nu e de la Registratura și nu e de la noi (SENT)
+          const benefMsg = (t.messages||[]).find(m => {
+            const from = (m.payload?.headers||[]).find(h=>h.name==='From')?.value||'';
+            const lf = from.toLowerCase();
+            return !lf.includes('registratur') && !(m.labelIds||[]).includes('SENT');
+          });
+          if (benefMsg) {
+            const from = (benefMsg.payload?.headers||[]).find(h=>h.name==='From')?.value||'';
+            const addr = (from.match(/<([^>]+)>/) || from.match(/(\S+@\S+)/) || [])[1] || from;
+            // asociem adresa tuturor msg-urilor din același thread
+            regGroups.flatMap(g => g.msgs).filter(m => m.threadId===tid)
+              .forEach(m => beneficiarMap.set(m.id, {addr, display: from.replace(/<.*>/,'').trim()||addr}));
+          }
+        } catch(_){}
+      }));
+    }
+
     list.innerHTML = `<div style="padding:4px 12px;font-size:10px;color:var(--text3);border-bottom:1px solid var(--border)">
       📤 ${filtered.length} trimise · ${groups.size} adrese Sector 2 · ultimele ${days} zile
-    </div>` + groupsSorted.map((g, gi) => {
+    </div>` + groupsSorted.map((g) => {
       const confCount = g.msgs.filter(md => {
         const snip=(md.snippet||'').toLowerCase();
         return snip.includes('numărul de înregistrare')||/r\d+\/\d+\//.test(snip)||_confirmedSentIds.has(md.id);
       }).length;
+      const isReg = /registratur/i.test(g.addr);
       const rows = g.msgs.map(md => {
         const h = Object.fromEntries((md.payload?.headers||[]).map(x=>[x.name,x.value]));
         const snip=(md.snippet||'').toLowerCase();
         const isConf=snip.includes('numărul de înregistrare')||/r\d+\/\d+\//.test(snip)||_confirmedSentIds.has(md.id);
+        const benef = beneficiarMap.get(md.id);
+        const benefRow = benef
+          ? `<div style="font-size:10px;color:var(--accent2);margin-top:2px">👤 beneficiar: <b>${esc(benef.display)}</b> &lt;${esc(benef.addr)}&gt;</div>`
+          : '';
         return `<div class="erow" style="padding-left:28px;border-left:2px solid var(--border)" onclick="viewEmail('${md.id}')">
           <div class="erow-top">
             <span class="erow-subj" style="flex:1">${esc(h.Subject||'(fără subiect)')}${isConf?' <span style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;border-radius:3px;padding:0 4px;font-size:10px;font-weight:600">📊</span>':''}</span>
             <span class="erow-date">${fmtDate(parseInt(md.internalDate))}</span>
           </div>
           <div class="erow-snip">${esc(md.snippet||'')}</div>
+          ${benefRow}
         </div>`;
       }).join('');
       return `<div class="sent-group">
         <div class="sent-group-hdr" onclick="this.parentElement.classList.toggle('open')">
           <span class="sent-group-arrow">▶</span>
-          <span class="sent-group-addr">${esc(g.display||g.addr)}</span>
+          <span class="sent-group-addr">${isReg?'📋 ':''}${esc(g.display||g.addr)}</span>
           <span style="font-size:10px;color:var(--text3);margin-left:4px">${esc(g.addr)}</span>
           <span style="margin-left:auto;display:flex;gap:4px;align-items:center">
             ${confCount?`<span style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;border-radius:3px;padding:0 5px;font-size:10px;font-weight:600">📊 ${confCount}</span>`:''}
