@@ -215,21 +215,29 @@ poll();
                 }
                 if (-not $found) { throw "Tabela '$tableName' nu a fost gasita in Excel" }
 
-                $range = $found.Range
                 $rows = @()
                 $headers = @()
                 $headerRow = $found.HeaderRowRange
-                for ($c = 1; $c -le $headerRow.Columns.Count; $c++) {
-                    $headers += $headerRow.Cells.Item(1, $c).Text
+                $colCount = $headerRow.Columns.Count
+                for ($c = 1; $c -le $colCount; $c++) {
+                    $headers += [string]$headerRow.Cells.Item(1, $c).Text
                 }
                 $dataRange = $found.DataBodyRange
                 if ($dataRange) {
-                    for ($r = 1; $r -le $dataRange.Rows.Count; $r++) {
+                    # Citeste tot block-ul dintr-o singura operatie COM — mult mai rapid
+                    $vals = $dataRange.Value2
+                    $rowCount = $dataRange.Rows.Count
+                    if ($rowCount -eq 1) {
+                        # Single row — Value2 returneaza array 1D
                         $obj = @{}
-                        for ($c = 1; $c -le $dataRange.Columns.Count; $c++) {
-                            $obj[$headers[$c-1]] = $dataRange.Cells.Item($r, $c).Text
-                        }
+                        for ($c = 1; $c -le $colCount; $c++) { $obj[$headers[$c-1]] = if ($vals[$c] -ne $null) { [string]$vals[$c] } else { '' } }
                         $rows += $obj
+                    } else {
+                        for ($r = 1; $r -le $rowCount; $r++) {
+                            $obj = @{}
+                            for ($c = 1; $c -le $colCount; $c++) { $obj[$headers[$c-1]] = if ($vals[$r,$c] -ne $null) { [string]$vals[$r,$c] } else { '' } }
+                            $rows += $obj
+                        }
                     }
                 }
                 $jss = New-Object System.Web.Script.Serialization.JavaScriptSerializer
