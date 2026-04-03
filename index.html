@@ -2917,6 +2917,8 @@ async function _openRegModalWithRow(row, sheetRow) {
   document.getElementById('regNextNr').textContent=`Rând #${sheetRow}${indicativ?' — '+indicativ:''}`;
   document.getElementById('regNextNr').dataset.nr = nrCrt || document.getElementById('regNextNr').dataset.nr;
   document.getElementById('regNextNr').dataset.targetrow = sheetRow;
+  // Re-sincronizează denumirea atașamentului cu nr. corect al rândului selectat
+  syncDocOptInput();
 }
 
 // ══════════════════════════════════════════════════════════
