@@ -3568,14 +3568,19 @@ function renderIstoric(rows) {
   const today = new Date();
   const todayStr = `${String(today.getDate()).padStart(2,'0')}.${String(today.getMonth()+1).padStart(2,'0')}.${today.getFullYear()}`;
 
-  const sheetsBadge = '<span style="display:inline-flex;align-items:center;gap:3px;background:#dcfce7;color:#166534;border:1px solid #bbf7d0;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:600;white-space:nowrap">📤 Sheets</span>';
-  const thead = `<thead><tr><th style="width:80px">Sursă</th>${_istoricHeaders.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead>`;
+  const statusIdx = _istoricHeaders.findIndex(h => h.toLowerCase().includes('status'));
+  const thead = `<thead><tr>${_istoricHeaders.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead>`;
   // Afișează ultimele rânduri primele (invers)
   const tbody = '<tbody>' + [...rows].reverse().map(row => {
     const isToday = row.some(v => String(v||'').includes(todayStr));
+    const isTrimis = statusIdx >= 0 && String(row[statusIdx]||'').toLowerCase().includes('trimis');
+    const trimisFlag = isTrimis ? ' <span style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;border-radius:3px;padding:0 4px;font-size:10px;font-weight:600">📊</span>' : '';
     return `<tr${isToday?' class="today"':''}>` +
-      `<td style="text-align:center">${sheetsBadge}</td>` +
-      _istoricHeaders.map((_,i) => `<td title="${esc(String(row[i]||''))}">${esc(String(row[i]||''))}</td>`).join('') +
+      _istoricHeaders.map((_,i) => {
+        const val = esc(String(row[i]||''));
+        const extra = (i === statusIdx && isTrimis) ? trimisFlag : '';
+        return `<td title="${esc(String(row[i]||''))}">${val}${extra}</td>`;
+      }).join('') +
       '</tr>';
   }).join('') + '</tbody>';
 
@@ -5365,8 +5370,8 @@ function showRegConfirmInSidebar(nr, toEmail, emailStatus) {
     <div class="istoric-status" id="istoricStatus">
       <span id="istoricSheetName" style="font-family:var(--mono);font-size:10px;color:var(--text3)"></span>
       <span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--text3)">
-        <span style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;border-radius:3px;padding:0 5px;font-weight:600">📤 Sheets</span>
-        = trimis via Apps Script
+        <span style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;border-radius:3px;padding:0 5px;font-weight:600">📊</span>
+        = Status Email: trimis
       </span>
       <span id="istoricLastLoad"></span>
     </div>
