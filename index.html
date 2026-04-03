@@ -683,7 +683,13 @@ body.sql-panel-open .main{height:calc(var(--sql-panel-h, 46vh) * -1 + 100vh - 48
         <div class="reply-acts">
           <button class="btn btn-send" onclick="doSend()">▶ Trimite</button>
           <button class="btn btn-draft" onclick="doDraft()">⎙ Draft</button>
-          <button class="btn-attach" onclick="document.getElementById('fileInput').click()">📎 Atașează</button>
+          <div style="position:relative;display:inline-block" id="attachDropWrap">
+            <button class="btn-attach" onclick="toggleAttachDrop()" title="Atașează fișier">📎 Atașează ▾</button>
+            <div id="attachDrop" style="display:none;position:absolute;bottom:calc(100% + 4px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.2);min-width:160px;z-index:200;overflow:hidden">
+              <div onclick="document.getElementById('fileInput').click();toggleAttachDrop()" style="padding:8px 14px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:8px" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">💻 De pe calculator</div>
+              <div onclick="showDriveModal();toggleAttachDrop()" style="padding:8px 14px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:8px;border-top:1px solid var(--border)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">📁 Din Google Drive</div>
+            </div>
+          </div>
           <button class="btn-save-tmpl" onclick="showSaveTmplForm()">⊕ Salv. template</button>
           <button class="btn btn-clear" onclick="clearReply()">✕</button>
           <span class="r-status" id="rStatus"></span>
@@ -2572,6 +2578,18 @@ function composeNew() {
   // Visual indicator — green border on To field
   document.getElementById('rTo').style.borderColor = '#22c55e';
 }
+
+function toggleAttachDrop() {
+  const d = document.getElementById('attachDrop');
+  d.style.display = d.style.display === 'none' ? '' : 'none';
+}
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('attachDropWrap');
+  if (wrap && !wrap.contains(e.target)) {
+    const d = document.getElementById('attachDrop');
+    if (d) d.style.display = 'none';
+  }
+});
 
 function clearReply(){
   _composeMode = false;
