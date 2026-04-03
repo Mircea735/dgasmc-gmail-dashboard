@@ -2669,9 +2669,12 @@ async function loadHistory(contactEmail, currentId) {
       const h2=Object.fromEntries((md.payload?.headers||[]).map(x=>[x.name,x.value]));
       const isSent=(md.labelIds||[]).includes('SENT');
       const isCurrent=md.id===currentId;
+      const snip=(md.snippet||'').toLowerCase();
+      const isSheetsSent=isSent&&(snip.includes('numărul de înregistrare')||/r\d+\/\d+\//.test(snip)||_emailsRegistered.has(md.id));
+      const sheetsBadge=isSheetsSent?'<span class="sheets-flag" title="Confirmare înregistrare via Sheets">📊</span>':'';
       return `<div class="hitem ${isCurrent?'is-current':''}" onclick="viewEmail('${md.id}')">
         <div class="hi-top">
-          <span class="hi-dir ${isSent?'sent':'recv'}">${isSent?'▶ trimis <span class="sheets-flag" title="Trimis via Sheets / Apps Script">📊</span>':'◀ primit'}</span>
+          <span class="hi-dir ${isSent?'sent':'recv'}">${isSent?'▶ trimis '+sheetsBadge:'◀ primit'}</span>
           <span class="hi-date">${fmtDateFull(parseInt(md.internalDate))}</span>
         </div>
         <div class="hi-subj">${esc(h2.Subject||'(fără subiect)')}</div>
