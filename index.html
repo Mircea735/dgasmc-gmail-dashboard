@@ -5405,7 +5405,15 @@ function showRegConfirmInSidebar(nr, toEmail, emailStatus) {
         </div>
         <div class="sql-set-field full">
           <label>Nume view / tabel (raport beneficiari)</label>
-          <input id="sqlViewName" type="text" placeholder="ex: vw_SituatieBeneficiari">
+          <div style="display:flex;gap:6px">
+            <input id="sqlViewName" type="text" placeholder="ex: PowerQuery_Fisiere" style="flex:1">
+            <select onchange="if(this.value){document.getElementById('sqlViewName').value=this.value;this.value=''}"
+              style="padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);color:var(--text2);font-size:11px">
+              <option value="">— quick select —</option>
+              <option value="PowerQuery_Fisiere">PowerQuery_Fisiere</option>
+              <option value="PowerQuery_InformatiiGenerale">PowerQuery_InformatiiGenerale</option>
+            </select>
+          </div>
         </div>
         <div class="sql-set-field full">
           <label>Clauză WHERE opțională (ex: Sector = 1)</label>

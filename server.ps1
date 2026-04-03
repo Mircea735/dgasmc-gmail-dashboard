@@ -209,15 +209,30 @@ poll();
                     throw "Doar SELECT/EXEC permis"
                 }
 
-                $conn = New-Object System.Data.SqlClient.SqlConnection($connStr)
-                $conn.Open()
-                $cmd = $conn.CreateCommand()
-                $cmd.CommandText = $query
-                $cmd.CommandTimeout = 30
-                $adapter = New-Object System.Data.SqlClient.SqlDataAdapter($cmd)
+                Add-Type -AssemblyName System.Data -ErrorAction SilentlyContinue
                 $table = New-Object System.Data.DataTable
-                $adapter.Fill($table) | Out-Null
-                $conn.Close()
+                if ([System.Type]::GetType('System.Data.SqlClient.SqlConnection') -ne $null -or
+                    ([System.AppDomain]::CurrentDomain.GetAssemblies() | Where-Object { $_.GetType('System.Data.SqlClient.SqlConnection') })) {
+                    $conn = New-Object System.Data.SqlClient.SqlConnection($connStr)
+                    $conn.Open()
+                    $cmd = $conn.CreateCommand()
+                    $cmd.CommandText = $query; $cmd.CommandTimeout = 30
+                    $adapter = New-Object System.Data.SqlClient.SqlDataAdapter($cmd)
+                    $adapter.Fill($table) | Out-Null
+                    $conn.Close()
+                } elseif (Get-Command Invoke-Sqlcmd -ErrorAction SilentlyContinue) {
+                    $rows2 = Invoke-Sqlcmd -ConnectionString $connStr -Query $query -OutputSqlErrors $true
+                    if ($rows2) {
+                        ($rows2[0].PSObject.Properties.Name) | ForEach-Object { [void]$table.Columns.Add($_) }
+                        $rows2 | ForEach-Object {
+                            $r = $table.NewRow()
+                            foreach ($c in $table.Columns) { $r[$c.ColumnName] = $_.$($c.ColumnName) }
+                            $table.Rows.Add($r)
+                        }
+                    }
+                } else {
+                    throw "SqlClient nedisponibil. Rulați: Install-Module SqlServer -Scope CurrentUser"
+                }
 
                 # Convert DataTable to array of objects
                 $rows = @()
