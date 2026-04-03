@@ -3607,7 +3607,7 @@ async function refreshIstoric() {
     const filtered = statusIdx >= 0
       ? _istoricAllRows.filter(r => String(r[statusIdx]||'').trim() !== '')
       : _istoricAllRows;
-    renderIstoric(filtered);
+    applyIstoricFilters(); // aplică sector + perioadă după încărcare
   } catch(e) {
     body.innerHTML = `<div style="padding:30px;color:var(--red);font-size:12px">✕ ${esc(e.message)}</div>`;
   }
@@ -3642,12 +3642,42 @@ function renderIstoric(rows) {
   body.innerHTML = `<table class="istoric-table">${thead}${tbody}</table>`;
 }
 
-function filterIstoric(q) {
-  if (!q.trim()) { renderIstoric(_istoricAllRows); return; }
-  const ql = q.toLowerCase();
-  const filtered = _istoricAllRows.filter(row => row.some(v => String(v||'').toLowerCase().includes(ql)));
+function filterIstoric(q) { applyIstoricFilters(); } // păstrat pentru compatibilitate
+
+function applyIstoricFilters() {
+  const sector = document.getElementById('istoricSector')?.value || '';
+  const days   = parseInt(document.getElementById('istoricPeriod')?.value ?? '7');
+  const q      = (document.getElementById('istoricSearch')?.value || '').toLowerCase().trim();
+
+  // Detectează coloanele relevante din headers
+  const sectorIdx = _istoricHeaders.findIndex(h => /sector/i.test(h));
+  const dateIdx   = _istoricHeaders.findIndex(h => /dat[aă]/i.test(h));
+
+  // Limită de dată (DD.MM.YYYY → parsare manuală)
+  const cutoff = days > 0 ? Date.now() - days * 86400000 : 0;
+  function parseRoDate(s) {
+    const m = String(s||'').match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+    return m ? new Date(+m[3], +m[2]-1, +m[1]).getTime() : 0;
+  }
+
+  const filtered = _istoricAllRows.filter(row => {
+    if (sector && sectorIdx >= 0) {
+      const val = String(row[sectorIdx]||'').trim();
+      if (!val.includes(sector)) return false;
+    }
+    if (days > 0 && dateIdx >= 0) {
+      const ts = parseRoDate(row[dateIdx]);
+      if (ts && ts < cutoff) return false;
+    }
+    if (q && !row.some(v => String(v||'').toLowerCase().includes(q))) return false;
+    return true;
+  });
+
   renderIstoric(filtered);
-  document.getElementById('istoricCount').textContent = `${filtered.length} / ${_istoricAllRows.length}`;
+  document.getElementById('istoricCount').textContent =
+    filtered.length === _istoricAllRows.length
+      ? `${filtered.length} înregistrări`
+      : `${filtered.length} / ${_istoricAllRows.length}`;
 }
 
 // ══════════════════════════════════════════════════════════
@@ -5413,8 +5443,23 @@ function showRegConfirmInSidebar(nr, toEmail, emailStatus) {
   <div class="istoric-panel">
     <div class="istoric-toolbar">
       <h3>📜 Istoric trimiteri</h3>
+      <select id="istoricSector" class="tb-select" style="min-width:90px" onchange="applyIstoricFilters()">
+        <option value="">Toate sectoarele</option>
+        <option value="2" selected>Sector 2</option>
+        <option value="1">Sector 1</option>
+        <option value="3">Sector 3</option>
+        <option value="4">Sector 4</option>
+        <option value="5">Sector 5</option>
+        <option value="6">Sector 6</option>
+      </select>
+      <select id="istoricPeriod" class="tb-select" style="min-width:110px" onchange="applyIstoricFilters()">
+        <option value="7" selected>Ultima săptămână</option>
+        <option value="30">Ultima lună</option>
+        <option value="90">Ultimele 3 luni</option>
+        <option value="0">Toate</option>
+      </select>
       <input type="search" class="istoric-search" id="istoricSearch" placeholder="🔍 Caută..."
-        oninput="filterIstoric(this.value)">
+        oninput="applyIstoricFilters()">
       <span id="istoricCount" style="font-size:11px;color:var(--text3);white-space:nowrap"></span>
       <button class="tb-btn" onclick="refreshIstoric()" title="Reîncarcă">↺ Refresh</button>
       <button class="tb-btn" style="margin-left:auto" onclick="hideIstoricModal()">✕</button>
