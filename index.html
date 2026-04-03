@@ -3473,12 +3473,11 @@ function _driveItemHtml(f) {
     actions = `<button class="drive-act-btn" onclick="driveOpenFolder('${f.id}','${esc(f.name)}')">📂 Deschide</button>`;
   } else if (isExcel || isGSheet) {
     actions = `<button class="drive-act-btn green" onclick="driveLoadExcel('${f.id}','${esc(f.name)}','${f.mimeType}')">📊 Încarcă tabel</button>
-               <button class="drive-act-btn" onclick="driveDownload('${f.id}','${esc(f.name)}','${f.mimeType}')">⬇</button>`;
-  } else if (isPdf || isImage) {
-    actions = `<button class="drive-act-btn green" onclick="driveAttach('${f.id}','${esc(f.name)}','${f.mimeType}')">📎 Atașează</button>
+               <button class="drive-act-btn" onclick="driveAttach('${f.id}','${esc(f.name)}','${f.mimeType}')">📎 Atașează</button>
                <button class="drive-act-btn" onclick="driveDownload('${f.id}','${esc(f.name)}','${f.mimeType}')">⬇</button>`;
   } else {
-    actions = `<button class="drive-act-btn" onclick="driveDownload('${f.id}','${esc(f.name)}','${f.mimeType}')">⬇ Descarcă</button>`;
+    actions = `<button class="drive-act-btn green" onclick="driveAttach('${f.id}','${esc(f.name)}','${f.mimeType}')">📎 Atașează</button>
+               <button class="drive-act-btn" onclick="driveDownload('${f.id}','${esc(f.name)}','${f.mimeType}')">⬇</button>`;
   }
 
   const nameClick = isFolder ? `onclick="driveOpenFolder('${f.id}','${esc(f.name)}')"` : '';
@@ -3595,8 +3594,21 @@ async function driveAttach(fileId, name, mime) {
   const status = document.getElementById('driveStatus');
   status.textContent = `⏳ Se descarcă ${name} pentru atașare...`;
   try {
-    const url = `${DRIVE_BASE}/files/${fileId}?alt=media`;
+    // Google Docs native formats → export ca Office
+    let url = `${DRIVE_BASE}/files/${fileId}?alt=media`;
+    let dlName = name;
+    if (mime === 'application/vnd.google-apps.document') {
+      url = `${DRIVE_BASE}/files/${fileId}/export?mimeType=application/vnd.openxmlformats-officedocument.wordprocessingml.document`;
+      dlName = name + '.docx';
+    } else if (mime === 'application/vnd.google-apps.presentation') {
+      url = `${DRIVE_BASE}/files/${fileId}/export?mimeType=application/vnd.openxmlformats-officedocument.presentationml.presentation`;
+      dlName = name + '.pptx';
+    } else if (mime === 'application/vnd.google-apps.spreadsheet') {
+      url = `${DRIVE_BASE}/files/${fileId}/export?mimeType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`;
+      dlName = name + '.xlsx';
+    }
     const resp = await fetch(url, { headers: { Authorization: 'Bearer ' + TOKEN } });
+    name = dlName;
     if (!resp.ok) throw new Error(resp.statusText);
     const arrayBuffer = await resp.arrayBuffer();
     const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
