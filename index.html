@@ -4041,9 +4041,10 @@ function _sqlConn() {
   const u = localStorage.getItem('sqlUser')||'';
   const p = localStorage.getItem('sqlPassword')||'';
   if (!s||!d) return null;
-  // Build connection string — prefer Windows Auth if no user
-  if (u) return `Server=${s};Database=${d};User Id=${u};Password=${p};TrustServerCertificate=True;Connect Timeout=15;`;
-  return `Server=${s};Database=${d};Trusted_Connection=True;TrustServerCertificate=True;Connect Timeout=15;`;
+  // Forțează TCP pentru server remote (evită Named Pipes)
+  const srv = (s.includes(',') || s.includes('\\\\')) ? s : `tcp:${s},1433`;
+  if (u) return `Server=${srv};Database=${d};User Id=${u};Password=${p};TrustServerCertificate=True;Encrypt=False;Connect Timeout=15;`;
+  return `Server=${srv};Database=${d};Trusted_Connection=True;TrustServerCertificate=True;Encrypt=False;Connect Timeout=15;`;
 }
 
 function _sqlQuery() {

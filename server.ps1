@@ -254,8 +254,9 @@ poll();
                 $res.ContentLength64 = $respBytes.Length
                 $res.OutputStream.Write($respBytes, 0, $respBytes.Length)
             } catch {
-                $errMsg = '{"error":"' + ($_.Exception.Message -replace '"','`"' -replace '\\','\\') + '"}'
-                $errBytes = [System.Text.Encoding]::UTF8.GetBytes($errMsg)
+                $safeMsg = $_.Exception.Message -replace '\\', '\\\\' -replace '"', '\"' -replace "`r`n", ' ' -replace "`n", ' '
+                $errMsg = '{"error":"' + $safeMsg + '"}'
+                $errBytes = (New-Object System.Text.UTF8Encoding $false).GetBytes($errMsg)
                 $res.StatusCode = 500
                 $res.ContentType = 'application/json; charset=utf-8'
                 $res.ContentLength64 = $errBytes.Length
