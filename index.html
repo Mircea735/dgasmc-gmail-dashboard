@@ -2721,13 +2721,14 @@ function syncDocOptInput() {
     // Extrage numarul registrului din SHEET_NAME (ex: "Registru E mail 43 2026" → 43)
     const regNr = (SHEET_NAME.match(/\b(\d{2,})\b/)||[])[1] || '';
     const rPrefix = regNr ? `R${regNr}` : 'R';
-    const indicativ = [rPrefix, nr, checked.join(', ')].filter(Boolean).join('.');
+    const data = document.getElementById('regData').value || '';
+    const indicativ = [rPrefix, nr, checked.join(', '), data].filter(Boolean).join('.');
     const atasEl = document.getElementById('regAtas');
     atasEl.value = indicativ;
     // Evidențiere verde — valoare sugerată automat
     atasEl.style.borderColor = 'var(--green)';
     atasEl.style.background  = 'rgba(22,163,74,.07)';
-    atasEl.title = `Sugerat: ${indicativ}  (R${regNr} = registru, ${nr} = nr.înreg., tipuri doc.)`;
+    atasEl.title = `Sugerat: ${indicativ}`;
   }
   // Sync attachment rename field with checked doc type names
   syncAttRenameFromReg();
