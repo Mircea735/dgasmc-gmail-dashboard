@@ -4062,8 +4062,11 @@ function showSqlViewer() {
   _sqlResizeInit();
   // Populate settings fields from localStorage
   ['sqlServer','sqlDatabase','sqlUser','sqlViewName','sqlWhere'].forEach(k=>{
-    const el=document.getElementById(k); if(el) el.value=localStorage.getItem(k)||'';
+    const el=document.getElementById(k);
+    if(el) el.value=localStorage.getItem(k)||(k==='sqlServer'?'192.168.1.10':k==='sqlDatabase'?'AsistentaSociala':'');
   });
+  const relCb=document.getElementById('sqlIncludeRelCols');
+  if(relCb) relCb.checked=localStorage.getItem('sqlIncludeRelCols')==='1';
   // Lazy render: dacă avem date Excel dar nu am randat încă, randează acum
   if (_sqlAllRows.length > 0 && !_sqlRendered) {
     renderSqlTable(_sqlAllRows);
@@ -4774,8 +4777,11 @@ function toggleSqlSettings() {
   p.classList.toggle('hidden');
   if (!p.classList.contains('hidden')) {
     ['sqlServer','sqlDatabase','sqlUser','sqlViewName','sqlWhere'].forEach(k=>{
-      const el=document.getElementById(k); if(el) el.value=localStorage.getItem(k)||'';
+      const el=document.getElementById(k);
+      if(el) el.value=localStorage.getItem(k)||(k==='sqlServer'?'192.168.1.10':k==='sqlDatabase'?'AsistentaSociala':'');
     });
+    const relCb=document.getElementById('sqlIncludeRelCols');
+    if(relCb) relCb.checked=localStorage.getItem('sqlIncludeRelCols')==='1';
   }
 }
 
@@ -4786,6 +4792,8 @@ function saveSqlSettings() {
   });
   const pw = document.getElementById('sqlPassword').value;
   if (pw) localStorage.setItem('sqlPassword', pw);
+  const relCb=document.getElementById('sqlIncludeRelCols');
+  if(relCb) localStorage.setItem('sqlIncludeRelCols', relCb.checked?'1':'0');
   document.getElementById('sqlSettingsPanel').classList.add('hidden');
   loadSqlData();
 }
@@ -5381,11 +5389,11 @@ function showRegConfirmInSidebar(nr, toEmail, emailStatus) {
       <div class="sql-set-grid">
         <div class="sql-set-field">
           <label>Server \ Instanță</label>
-          <input id="sqlServer" type="text" placeholder="ex: WINSRV\SQLEXPRESS">
+          <input id="sqlServer" type="text" placeholder="ex: 192.168.1.10">
         </div>
         <div class="sql-set-field">
           <label>Baza de date</label>
-          <input id="sqlDatabase" type="text" placeholder="ex: DGASMC_DB">
+          <input id="sqlDatabase" type="text" placeholder="ex: AsistentaSociala">
         </div>
         <div class="sql-set-field">
           <label>Utilizator SQL</label>
@@ -5403,6 +5411,13 @@ function showRegConfirmInSidebar(nr, toEmail, emailStatus) {
           <label>Clauză WHERE opțională (ex: Sector = 1)</label>
           <input id="sqlWhere" type="text" placeholder="lăsați gol pentru toate înregistrările">
         </div>
+      </div>
+      <div style="margin:6px 0 4px">
+        <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;color:var(--text2)">
+          <input type="checkbox" id="sqlIncludeRelCols"
+            onchange="localStorage.setItem('sqlIncludeRelCols',this.checked?'1':'0')">
+          Include coloane relație (FK, lookup, tabele asociate)
+        </label>
       </div>
       <div style="display:flex;gap:8px;margin-top:4px">
         <button class="btn btn-send" style="font-size:12px" onclick="saveSqlSettings()">💾 Salvează & Conectează</button>
