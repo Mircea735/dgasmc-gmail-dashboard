@@ -253,6 +253,25 @@ poll();
                 $res.ContentLength64 = $e.Length; $res.OutputStream.Write($e, 0, $e.Length)
             }
 
+        } elseif ($req.Url.AbsolutePath -eq '/api/pq-file') {
+            try {
+                $ms = New-Object System.IO.MemoryStream
+                $req.InputStream.CopyTo($ms)
+                $payload = [System.Text.Encoding]::UTF8.GetString($ms.ToArray()) | ConvertFrom-Json
+                $path = $payload.path
+                if (-not $path) { throw "Lipseste calea fisierului" }
+                if (-not (Test-Path $path)) { throw "Fisierul nu exista: $path" }
+                $bytes = [System.IO.File]::ReadAllBytes($path)
+                $res.ContentType = 'application/octet-stream'
+                $res.ContentLength64 = $bytes.Length
+                $res.OutputStream.Write($bytes, 0, $bytes.Length)
+            } catch {
+                $safeMsg = $_.Exception.Message -replace '\\','\\' -replace '"','\"'
+                $e = (New-Object System.Text.UTF8Encoding $false).GetBytes('{"error":"' + $safeMsg + '"}')
+                $res.StatusCode = 500; $res.ContentType = 'application/json'
+                $res.ContentLength64 = $e.Length; $res.OutputStream.Write($e, 0, $e.Length)
+            }
+
         } elseif ($req.Url.AbsolutePath -eq '/api/sql-ping') {
             $psVer = $PSVersionTable.PSVersion.ToString()
             $hasSqlClient = $null -ne ([System.AppDomain]::CurrentDomain.GetAssemblies() | Where-Object { try { $_.GetType('System.Data.SqlClient.SqlConnection') -ne $null } catch { $false } } | Select-Object -First 1)

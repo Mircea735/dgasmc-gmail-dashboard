@@ -4068,6 +4068,8 @@ function showSqlViewer() {
   });
   const relCb=document.getElementById('sqlIncludeRelCols');
   if(relCb) relCb.checked=localStorage.getItem('sqlIncludeRelCols')==='1';
+  const pqPathEl=document.getElementById('sqlPqPath');
+  if(pqPathEl) pqPathEl.value=localStorage.getItem('sqlPqPath')||'';
   // Lazy render: dacă avem date Excel dar nu am randat încă, randează acum
   if (_sqlAllRows.length > 0 && !_sqlRendered) {
     renderSqlTable(_sqlAllRows);
@@ -4802,16 +4804,34 @@ function saveSqlSettings() {
 let _pqLiveTimer = null;
 async function loadPqLive() {
   const table = localStorage.getItem('sqlViewName') || 'PowerQuery_Fisiere';
+  const pqPath = localStorage.getItem('sqlPqPath') || '';
   const body = document.getElementById('sqlBody');
-  body.innerHTML = '<div class="load-row"><div class="spinner"></div> Se citește din Excel PQ Live...</div>';
+  body.innerHTML = '<div class="load-row"><div class="spinner"></div> Se citește PQ Live...</div>';
   try {
-    const resp = await fetch('/api/pq', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({table})
-    });
-    const data = await resp.json();
-    if (data.error) throw new Error(data.error);
+    let data;
+    if (pqPath) {
+      // Citire directă din fișier Excel via server
+      const resp = await fetch('/api/pq-file', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({path: pqPath})
+      });
+      if (!resp.ok) { const e = await resp.json(); throw new Error(e.error); }
+      const ab = await resp.arrayBuffer();
+      const wb = XLSX.read(ab, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+      data = {rows, columns: rows.length ? Object.keys(rows[0]) : [], count: rows.length};
+    } else {
+      // Fallback: COM (Excel deschis)
+      const resp = await fetch('/api/pq', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({table})
+      });
+      data = await resp.json();
+      if (data.error) throw new Error(data.error);
+    }
     _sqlAllRows = data.rows || [];
     _sqlColumns = data.columns || [];
     _sqlSortCol = ''; _sqlSource = 'pq'; _sqlViewMode = 'table';
@@ -5453,6 +5473,11 @@ function showRegConfirmInSidebar(nr, toEmail, emailStatus) {
         <div class="sql-set-field full">
           <label>Clauză WHERE opțională (ex: Sector = 1)</label>
           <input id="sqlWhere" type="text" placeholder="lăsați gol pentru toate înregistrările">
+        </div>
+        <div class="sql-set-field full">
+          <label>📂 Cale fișier Excel PQ (alternativă la SQL)</label>
+          <input id="sqlPqPath" type="text" placeholder="ex: C:\Users\User\Documents\PowerQuery_Fisiere.xlsx"
+            onchange="localStorage.setItem('sqlPqPath',this.value.trim())">
         </div>
       </div>
       <div style="margin:6px 0 4px">
