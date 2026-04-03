@@ -3681,7 +3681,13 @@ async function driveAttach(fileId, name, mime) {
     name = dlName;
     if (!resp.ok) throw new Error(resp.statusText);
     const arrayBuffer = await resp.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    // Conversie chunked — spread direct depășește call stack pentru fișiere >100KB
+    const bytes = new Uint8Array(arrayBuffer);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 8192) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+    }
+    const base64 = btoa(binary);
     // Adaugă în lista de atașamente compose
     attachedFiles.push({ name, type: mime, data: base64 });
     _renderFileAttachRow();
