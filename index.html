@@ -3591,25 +3591,7 @@ async function refreshIstoric() {
     const meta = await api(`${SHEETS_BASE}/${SHEETS_ID}?fields=sheets.properties.title`);
     const sheets = (meta.sheets||[]).map(s=>s.properties.title);
     const savedSheet = localStorage.getItem('istoricSheetOverride');
-    const found = savedSheet || sheets.find(t=>t.toLowerCase().includes('istoric'));
-    if (!found) {
-      const opts = sheets.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
-      body.innerHTML = `<div style="padding:24px;font-size:12px">
-        <div style="color:var(--red);margin-bottom:12px">Sheet-ul „ISTORIC" nu există în spreadsheet.</div>
-        <label style="color:var(--text2)">Alege un sheet ca sursă ISTORIC:</label><br>
-        <select id="istoricSheetPicker" style="margin:8px 0;padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);color:var(--text1);font-size:12px;width:100%;max-width:400px">
-          <option value="">— selectează —</option>${opts}
-        </select><br>
-        <button class="tb-btn" style="margin-top:6px" onclick="
-          const v=document.getElementById('istoricSheetPicker').value;
-          if(!v){alert('Selectează un sheet.');return;}
-          localStorage.setItem('istoricSheetOverride',v);
-          refreshIstoric();
-        ">✓ Folosește acest sheet</button>
-        <button class="tb-btn" style="margin-top:6px;margin-left:6px;color:var(--text3)" onclick="localStorage.removeItem('istoricSheetOverride');refreshIstoric()">↺ Reset</button>
-      </div>`;
-      return;
-    }
+    const found = savedSheet || sheets.find(t=>t.toLowerCase().includes('istoric')) || SHEET_NAME;
     document.getElementById('istoricSheetName').textContent = `Sheet: ${found} · ${SHEETS_ID.slice(0,16)}…`;
     const range = encodeURIComponent(`'${found}'!A:Z`);
     const url = `${SHEETS_BASE}/${SHEETS_ID}/values/${range}`;
@@ -3620,10 +3602,14 @@ async function refreshIstoric() {
     _istoricAllRows = rows.slice(1);
     const now = new Date();
     document.getElementById('istoricLastLoad').textContent = `Actualizat: ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-    renderIstoric(_istoricAllRows);
+    // Filtrare automată: doar rândurile cu Status email completat
+    const statusIdx = _istoricHeaders.findIndex(h => h.toLowerCase().includes('status'));
+    const filtered = statusIdx >= 0
+      ? _istoricAllRows.filter(r => String(r[statusIdx]||'').trim() !== '')
+      : _istoricAllRows;
+    renderIstoric(filtered);
   } catch(e) {
-    const sheetsList = e._sheets ? ` Sheets disponibile: ${e._sheets}` : '';
-    body.innerHTML = `<div style="padding:30px;color:var(--red);font-size:12px">✕ ${esc(e.message)}${sheetsList}<br><br><small>Sheet-ul cu „ISTORIC" în nume nu a fost găsit.</small></div>`;
+    body.innerHTML = `<div style="padding:30px;color:var(--red);font-size:12px">✕ ${esc(e.message)}</div>`;
   }
 }
 
